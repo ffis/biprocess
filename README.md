@@ -16,7 +16,7 @@ cd biprocess
 npm install 	 #install dependencies
 cp config-example.json config.json 	# copy config.json and configure database and redis connection parameters
 cp jobs-example.xml jobs.xml 		# configure what jobs should be executed and their peridiocity
-npm test 							# run some tests to check everything is properly configured
+npm test 				# run some tests to check everything is properly configured
 
 ```
 
