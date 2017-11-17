@@ -30,5 +30,6 @@
 		"type": "application/json; charset=utf-8"
 	},
 	"poweredby": "loksly@gmail.com",
-	"encryptUser": false
+	"encryptUser": false,
+	"debug": true
 }

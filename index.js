@@ -53,7 +53,9 @@
 				redisclient.set(newkey, JSON.stringify(value), redis.print);
 				redispublish.publish(newkey, JSON.stringify(value));
 				redispublish.publish('updates', newkey);
-//				logger.log(newkey, JSON.stringify(value).length, 'ok');
+				if (config.debug){
+					logger.log('Event OK:', newkey, 'The length of the new stored value is:', JSON.stringify(value).length);
+				}
 			}).fail(function(err){
 				logger.error(key, err);
 			});
@@ -121,7 +123,7 @@
 			const fn = caller(functionname, obj, job.$.key, parameters);
 			fn();
 		} else {
-			logger.log('Wrong command');
+			logger.error('Wrong command:', cmd);
 		}
 	}
 
@@ -170,7 +172,6 @@
 
 					return schedule.scheduleJob(cronmatching, fn);
 				});
-
 
 				process.on('exit', function(){
 					crons.forEach(function(c){

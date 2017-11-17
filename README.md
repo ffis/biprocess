@@ -26,3 +26,49 @@ If tests ran flawlessly then just keep the daemon running with something like:
 forever index.js
 ```
 
+
+
+## How to configure config.json
+
+The file that configures how to connect to the different services is _config.json_ that looks like this:
+
+```json
+{
+	"db": {
+		"user": "",
+		"password": "",
+		"server": "",
+		"database": "",
+		"connectionTimeout": 250000,
+		"requestTimeout": 250000
+	},
+	"redis": {
+		"host": "localhost",
+		"port": 6379,
+		"no_ready_check": true
+	},
+	"server": {
+		"port": 443,
+		"options": {
+			"key": "certs/claveprivada.pem",
+			"cert": "certs/certificado-servidor.pem",
+			"passphrase": ""
+		}
+	},
+	"jwt": {
+		"secret": "",
+		"expiresIn": "6h"
+	},
+	"cache": {
+		"expire": 300,
+		"prefix": "lks_",
+		"type": "application/json; charset=utf-8"
+	},
+	"poweredby": "loksly@gmail.com",
+	"encryptUser": false,
+	"debug": true
+}
+
+```
+
+You should change the properties according to your infrastructure and services stack.
