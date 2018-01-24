@@ -2,6 +2,7 @@
 	'use strict';
 
 	const fs = require('fs'),
+		path = require('path'),
 		sql = require('mssql'),
 		redis = require('redis'),
 		Q = require('q'),
@@ -29,7 +30,7 @@
 
 	let jobs = [];
 
-	fs.readFile('jobs.xml', 'utf8', jobsdeferred.makeNodeResolver());
+	fs.readFile(path.join(__dirname, 'jobs.xml'), 'utf8', jobsdeferred.makeNodeResolver());
 
 	redisclient.on('error', function (err) {
 		logger.error('Error REDIS:', err);
@@ -42,7 +43,6 @@
 	function generator(functionname, obj, key, params){
 		return function(){
 			return Reflect.apply(functionname, obj, [connection, params]).then(function(value){
-				
 				let newkey = key;
 				if (typeof params === 'object'){
 					for (const p in params){
@@ -101,27 +101,29 @@
 	}
 
 	function runCommand(cmd){
-		const p = jobs.filter(function(job){
+
+		const p = cmd.trim() === 'runall' ? jobs : jobs.filter(function(job){
 			return job.$.key === cmd;
 		});
 
 		if (p.length > 0){
-			const job = p[0];
-			const methodname = job.$.method.split('.');
-			const obj = lib[methodname[0]],
-				functionname = lib[methodname[0]][methodname[1]];
+			p.forEach(function(job){
+				const methodname = job.$.method.split('.');
+				const obj = lib[methodname[0]],
+					functionname = lib[methodname[0]][methodname[1]];
 
-			let parameters = false;
+				let parameters = false;
 
-			if (job.parameters){
-				parameters = job.parameters[0].field.reduce(function(prev, parameter){
-					prev[parameter.$.name] = parameter.value;
+				if (job.parameters){
+					parameters = job.parameters[0].field.reduce(function(prev, parameter){
+						prev[parameter.$.name] = parameter.value;
 
-					return prev;
-				}, {});
-			}
-			const fn = caller(functionname, obj, job.$.key, parameters);
-			fn();
+						return prev;
+					}, {});
+				}
+				const fn = caller(functionname, obj, job.$.key, parameters);
+				fn();
+			});
 		} else {
 			logger.error('Wrong command:', cmd);
 		}
