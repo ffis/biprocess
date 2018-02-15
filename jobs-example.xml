@@ -7,7 +7,7 @@
 				<value><![CDATA[
 					select field, count(*)
 					from table1 inner join table2 on table1.id = table2.foreignkey
-					where field_filter_example < @parametername
+					where field_filter_example < $parametername
 					group by field
 				]]></value>
 			</field>

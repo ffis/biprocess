@@ -1,17 +1,19 @@
 {
 	"db": {
-		"driver": "mssql",
-		"user": "",
-		"password": "",
-		"server": "",
 		"database": "",
-		"connectionTimeout": 250000,
-		"requestTimeout": 250000
+		"username": "",
+		"password": "",
+		"options": {
+			"dialect": "mssql",
+			"host": "localhost",
+			"operatorsAliases": false,
+			"logging": false
+		}
 	},
 	"redis": {
 		"host": "localhost",
 		"port": 6379,
 		"no_ready_check": true
 	},
-	"debug": true
+	"debug": false
 }

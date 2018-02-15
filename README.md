@@ -24,13 +24,23 @@ cd biprocess
 npm install 	 #install dependencies
 cp config-example.json config.json 	# copy config.json and configure database and redis connection parameters
 cp jobs-example.xml jobs.xml 		# configure what jobs should be executed and their peridiocity
-npm test 				# run some tests to check everything is properly configured
 
+```
+
+Depending on the kind of database you want to connect (see next section), you may need to add one of the following:
+
+```bash
+npm install --save pg pg-hstore
+npm install --save mysql2
+npm install --save sqlite3
+npm install --save tedious // MSSQL
 ```
 
 If tests ran flawlessly then just keep the daemon running with something like:
 
 ```bash
+sudo npm i -g mocha forever
+npm test 				# run some tests to check everything is properly configured
 forever index.js
 ```
 
@@ -43,13 +53,15 @@ The file that configures how to connect to the different services is _config.jso
 ```json
 {
 	"db": {
-		"driver": "mssql",
-		"user": "",
-		"password": "",
-		"server": "",
 		"database": "",
-		"connectionTimeout": 250000,
-		"requestTimeout": 250000
+		"username": "",
+		"password": "",
+		"options": {
+			"dialect": "mssql",
+			"host": "localhost",
+			"operatorsAliases": false,
+			"logging": false
+		}
 	},
 	"redis": {
 		"host": "localhost",
@@ -61,8 +73,11 @@ The file that configures how to connect to the different services is _config.jso
 
 ```
 
-You should change the properties according to your infrastructure and services
-stack.
+You should change the properties according to your infrastructure and services stack.
+
+Note db.options.dialect accepts 'mysql'|'sqlite'|'postgres'|'mssql' as values.
+This tool uses [Sequelize](http://docs.sequelizejs.com/) to gain support of several kind of databases.
+Check it for more configuration options information.
 
 
 ## Copyright notes:

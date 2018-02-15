@@ -3,7 +3,7 @@
 
 	const fs = require('fs'),
 		path = require('path'),
-		sql = require('mssql'),
+		Sequelize = require('sequelize'),
 		redis = require('redis'),
 		Q = require('q'),
 		schedule = require('node-schedule'),
@@ -50,7 +50,7 @@
 				if (config.debug){
 					logger.log('Event OK:', newkey, 'The length of the new stored value is:', JSON.stringify(value).length);
 				}
-			}).fail(function(err){
+			}, function(err){
 				logger.error(key, err);
 			});
 		};
@@ -129,10 +129,11 @@
 	});
 
 	function connect(){
-		const connectiondeferred = Q.defer();
-		connection = new sql.Connection(config.db, connectiondeferred.makeNodeResolver());
+		connection = new Sequelize(config.db.database, config.db.username, config.db.password, config.db.options);
+
+		Sequelize.Promise = require('q');
 		
-		return connectiondeferred.promise;
+		return connection.authenticate();
 	}
 
 	function loadXML(){
@@ -201,8 +202,8 @@
 
 	process.on('exit', function(){
 		cancelAllCrons();
+		connection.close();
 	});
-
 
 	const supportedCommandsDescription = {
 		'reload': 'Reload jobs file',
@@ -246,6 +247,7 @@
 			supportedCommands.help();
 		},
 		quit: function(){
+			cancelAllCrons();
 			connection.close();
 			process.exit(0);
 		}
@@ -265,6 +267,5 @@
 	}).on('close', function(){
 		process.exit(0);
 	});
-
 
 })(process, console);
