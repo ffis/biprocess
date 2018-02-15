@@ -56,25 +56,6 @@ The file that configures how to connect to the different services is _config.jso
 		"port": 6379,
 		"no_ready_check": true
 	},
-	"server": {
-		"port": 443,
-		"options": {
-			"key": "certs/claveprivada.pem",
-			"cert": "certs/certificado-servidor.pem",
-			"passphrase": ""
-		}
-	},
-	"jwt": {
-		"secret": "",
-		"expiresIn": "6h"
-	},
-	"cache": {
-		"expire": 300,
-		"prefix": "lks_",
-		"type": "application/json; charset=utf-8"
-	},
-	"poweredby": "loksly@gmail.com",
-	"encryptUser": false,
 	"debug": true
 }
 
