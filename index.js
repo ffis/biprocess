@@ -37,7 +37,6 @@
 	function generator(functionname, obj, key, params){
 		return function(){
 			return Reflect.apply(functionname, obj, [connection, params]).then(function(value){
-				
 				let newkey = key;
 				if (typeof params === 'object'){
 					newkey = Object.keys(params).reduce(function(p, c){
@@ -96,27 +95,29 @@
 	}
 
 	function runCommand(cmd){
-		const p = jobs.filter(function(job){
+
+		const p = cmd.trim() === 'runall' ? jobs : jobs.filter(function(job){
 			return job.$.key === cmd;
 		});
 
 		if (p.length > 0){
-			const job = p[0];
-			const methodname = job.$.method.split('.');
-			const obj = lib[methodname[0]],
-				functionname = lib[methodname[0]][methodname[1]];
+			p.forEach(function(job){
+				const methodname = job.$.method.split('.');
+				const obj = lib[methodname[0]],
+					functionname = lib[methodname[0]][methodname[1]];
 
-			let parameters = false;
+				let parameters = false;
 
-			if (job.parameters){
-				parameters = job.parameters[0].field.reduce(function(prev, parameter){
-					prev[parameter.$.name] = parameter.value;
+				if (job.parameters){
+					parameters = job.parameters[0].field.reduce(function(prev, parameter){
+						prev[parameter.$.name] = parameter.value;
 
-					return prev;
-				}, {});
-			}
-			const fn = caller(functionname, obj, job.$.key, parameters);
-			fn();
+						return prev;
+					}, {});
+				}
+				const fn = caller(functionname, obj, job.$.key, parameters);
+				fn();
+			});
 		} else {
 			logger.error('Wrong command:', cmd, 'Enter help for available commands');
 		}

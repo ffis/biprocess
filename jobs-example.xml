@@ -1,6 +1,7 @@
 <jobs>
 	<job key="/api/1/cacheable/entityA" method="library.method" cron="*/120 * * * *" />
 	<job key="/api/1/cacheable/entityB" method="util.genericQuery" cron="*/15 * * * *">
+		<description>Calculates the number of times something happens</description>
 		<parameters>
 			<field name="query">
 				<value><![CDATA[

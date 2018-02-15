@@ -2,11 +2,19 @@
 Business Process daemon
 
 
-This daemon is intented to be running some SQL queries and to store their results in a _REDIS_ server.
-It should be combined with some other tools that monitor REDIS server and uses the results to show some stats on a dashboard.
+This daemon is intented to be running some heavyweight jobs and to store their
+results in a _REDIS_ server. Example of heavyweight job is an SQL query that last
+for more than a couple of seconds. If it's acceptable that it result can be cached
+for some time this is a project you might be interested in. You can choose for how
+long it will be cached and for each job when (_peridiocity_) it needs to be runned
+using a cron like expression.
+
+It should be combined with some other tools that monitor REDIS server and uses
+the results to show some stats on a dashboard.
+
+If you don't have a _REDIS_ server installed check the [redis installation manual](./redis.md).
 
 ## Install process
-
 
 Using bash:
 
@@ -35,6 +43,7 @@ The file that configures how to connect to the different services is _config.jso
 ```json
 {
 	"db": {
+		"driver": "mssql",
 		"user": "",
 		"password": "",
 		"server": "",
@@ -71,4 +80,13 @@ The file that configures how to connect to the different services is _config.jso
 
 ```
 
-You should change the properties according to your infrastructure and services stack.
+You should change the properties according to your infrastructure and services
+stack.
+
+
+## Copyright notes:
+
+This software is available under MIT license:
+* Copyright (c) 2018, FFIS
+ 
+ Author: Loksly https://github.com/loksly/
