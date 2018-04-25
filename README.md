@@ -23,7 +23,8 @@ git clone https://github.com/ffis/biprocess # clone repository
 cd biprocess
 npm install 	 #install dependencies
 cp config-example.json config.json 	# copy config.json and configure database and redis connection parameters
-cp jobs-example.xml jobs.xml 		# configure what jobs should be executed and their peridiocity
+mkdir jobs 	# use a directory to keep your jobs in a different directory than the code is
+cp jobs-example.xml jobs/jobs.xml 		# configure what jobs should be executed and their peridiocity
 
 ```
 
@@ -68,7 +69,8 @@ The file that configures how to connect to the different services is _config.jso
 		"port": 6379,
 		"no_ready_check": true
 	},
-	"debug": true
+	"debug": true,
+	"jobsDirectory": "jobs/"
 }
 
 ```

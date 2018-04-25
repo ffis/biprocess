@@ -3,6 +3,7 @@
 
 	const fs = require('fs'),
 		path = require('path'),
+		os = require('os'),
 		Sequelize = require('sequelize'),
 		redis = require('redis'),
 		Q = require('q'),
@@ -11,16 +12,20 @@
 		parseString = require('xml2js').parseString,
 		lib = require('require.all')('./routes');
 
-	const rl = readline.createInterface({
-		input: process.stdin,
-		output: process.stdout,
-		prompt: 'COMMAND> '
-	});
-
 	const config = require('./config.json');
 
 	const redisclient = redis.createClient(config.redis.port, config.redis.host);
 	const redispublish = redis.createClient(config.redis.port, config.redis.host);
+
+
+	const supportedCommandsDescription = {
+		'reload': 'Reload jobs file',
+		'runall': 'Runs all available commands',
+		'help': 'Show the list of available commands',
+		'?': 'Help alias',
+		'quit': 'Exits'
+	};
+	
 
 	let jobs = [],
 		crons = [],
@@ -130,7 +135,7 @@
 
 	function connect(){
 		if (config.db.options.logging){
-			config.db.options.logging = console.log;
+			config.db.options.logging = logger.log;
 		}
 		connection = new Sequelize(config.db.database, config.db.username, config.db.password, config.db.options);
 
@@ -142,14 +147,49 @@
 	function loadXML(){
 		const jobsdeferred = Q.defer();
 
-		fs.readFile(path.join(__dirname, 'jobs.xml'), 'utf8', jobsdeferred.makeNodeResolver());
+		if (config.jobsDirectory){
+			fs.readdir(path.join(__dirname, config.jobsDirectory), (err, files) => {
+				if (err){
+					logger.error(path.join(__dirname, config.jobsDirectory), 'is not readable or doesn\'t exist.');
+
+					return jobsdeferred.reject(err);
+				}
+
+				return Q.all(
+					files.filter((file) => file.endsWith('.xml')).map((file) => {
+						const defer = Q.defer();
+						fs.readFile(path.join(__dirname, config.jobsDirectory, file), 'utf8', defer.makeNodeResolver());
+
+						return defer.promise;
+					})
+				).then((c) => jobsdeferred.resolve(c)).catch((e) => jobsdeferred.reject(e));
+			});
+		} else {
+			fs.readFile(path.join(__dirname, 'jobs.xml'), 'utf8', jobsdeferred.makeNodeResolver());
+		}
 
 		return jobsdeferred.promise;
 	}
 
 	function xml2jobs(xml){
-		const paserDefer = Q.defer();
+		if (typeof xml === 'object' && Array.isArray(xml)){
+			return Q.all(xml.map(function(data){
+				const paserDefer = Q.defer();
 
+				parseString(data, paserDefer.makeNodeResolver());
+
+				return paserDefer.promise;
+
+			})).then(function(datas){
+				return datas.reduce(function(p, c){
+					p.jobs.job = p.jobs.job.concat(c.jobs.job);
+
+					return p;
+				}, {jobs: {job: []}});
+			});
+		}
+
+		const paserDefer = Q.defer();
 		parseString(xml, paserDefer.makeNodeResolver());
 
 		return paserDefer.promise;
@@ -192,30 +232,6 @@
 		}).filter(function(a){ return a; });
 	}
 
-	Q.all([loadXML(), connect()]).then(function(content){
-
-		return xml2jobs(content[0]);
-	}).then(function(jbs){
-		setJobs(jbs);
-		rl.prompt();
-	}).catch(function(err){
-		logger.error(err);
-		process.exit(-1);
-	});
-
-	process.on('exit', function(){
-		cancelAllCrons();
-		connection.close();
-	});
-
-	const supportedCommandsDescription = {
-		'reload': 'Reload jobs file',
-		'runall': 'Runs all available commands',
-		'help': 'Show the list of available commands',
-		'?': 'Help alias',
-		'quit': 'Exits'
-	};
-
 	const supportedCommands = {
 		reload: function(){
 			return loadXML().then(function(content){
@@ -237,14 +253,14 @@
 		},
 		help: function(){
 			const comms = Object.keys(supportedCommands).map(function(s){
-				return s + (typeof supportedCommandsDescription[s] === 'string' ? "\n\t" + supportedCommandsDescription[s] : '');
+				return s + (typeof supportedCommandsDescription[s] === 'string' ? os.EOL + "\t" + supportedCommandsDescription[s] : '');
 			});
 			const options = jobs.map(function(job){
-				return job.$.key + (job.description ? "\n\t" + job.description : '');
+				return job.$.key + (job.description ? os.EOL + "\t" + job.description : '');
 			}).concat(comms);
 
-			logger.log("\n", 'The available options are:', "\n");
-			logger.log(options.join("\n"));
+			logger.log(os.EOL, 'The available options are:', os.EOL);
+			logger.log(options.join(os.EOL));
 		},
 		'?': function(){
 			supportedCommands.help();
@@ -255,6 +271,40 @@
 			process.exit(0);
 		}
 	};
+
+	function completer(line) {
+		const comms = Object.keys(supportedCommands);
+		const options = jobs.map(function(job){
+			return job.$.key;
+		}).concat(comms);
+
+		const hits = options.filter((c) => c.startsWith(line));
+
+		return [hits.length ? hits : options, line];
+	}
+
+	const rl = readline.createInterface({
+		input: process.stdin,
+		output: process.stdout,
+		prompt: 'COMMAND> ',
+		completer: completer
+	});
+
+	Q.all([loadXML(), connect()]).then(function(content){
+
+		return xml2jobs(content[0]);
+	}).then(function(jbs){
+		setJobs(jbs);
+		rl.prompt();
+	}).catch(function(err){
+		logger.error(err);
+		process.exit(-1);
+	});
+
+	process.on('exit', function(){
+		cancelAllCrons();
+		connection.close();
+	});
 
 	rl.on('line', function(line){
 		if (line.trim() !== ''){
