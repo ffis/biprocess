@@ -129,6 +129,9 @@
 	});
 
 	function connect(){
+		if (config.db.options.logging){
+			config.db.options.logging = console.log;
+		}
 		connection = new Sequelize(config.db.database, config.db.username, config.db.password, config.db.options);
 
 		Sequelize.Promise = require('q');

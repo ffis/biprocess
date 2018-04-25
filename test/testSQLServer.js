@@ -12,8 +12,13 @@
 		should = chai.should,
 		config = require(path.join(__dirname, '..', 'config.json'));
 
+	if (config.db.options.logging){
+		config.db.options.logging = console.log;
+	}
+
 	if (typeof describe === 'function'){
 		describe('SQL Server connection test', function(){
+			this.timeout(10000);
 			var connection;
 			before(function(){
 
