@@ -4,7 +4,6 @@
   "description": "",
   "main": "index.js",
   "dependencies": {
-    "bcrypt": "^1.0.2",
     "chai": "^4.0.2",
     "color-scheme": "0.0.5",
     "encrypter": "^1.0.0",
@@ -12,7 +11,7 @@
     "q": "^1.5.1",
     "redis": "^2.4.2",
     "require.all": "^2.0.3",
-    "sequelize": "^4.37.4",
+    "sequelize": "^5.8.7",
     "tedious": "^2.3.1",
     "xml2js": "^0.4.17"
   },
@@ -29,6 +28,6 @@
   "author": "loksly@gmail.com",
   "license": "MIT",
   "devDependencies": {
-    "mocha": "^3.4.2"
+    "mocha": "^6.1.4"
   }
 }
