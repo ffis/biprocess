@@ -4,11 +4,11 @@
 	const fs = require('fs'),
 		path = require('path'),
 		os = require('os'),
-		Sequelize = require('sequelize'),
 		redis = require('redis'),
 		Q = require('q'),
 		schedule = require('node-schedule'),
-		readline = require('readline'),
+        readline = require('readline'),
+        globToRegExp = require('glob-to-regexp'),
 		parseString = require('xml2js').parseString,
 		lib = require('require.all')('./routes');
 
@@ -17,7 +17,6 @@
 	const redisclient = redis.createClient(config.redis.port, config.redis.host);
 	const redispublish = redis.createClient(config.redis.port, config.redis.host);
 
-
 	const supportedCommandsDescription = {
 		'reload': 'Reload jobs file',
 		'runall': 'Runs all available commands',
@@ -25,23 +24,28 @@
 		'?': 'Help alias',
 		'quit': 'Exits'
 	};
-	
 
 	let jobs = [],
 		crons = [],
-		connection = false;
-	
+        connection = false,
+        mongodbclient = false;
+
 	redisclient.on('error', function (err) {
 		logger.error('Error REDIS:', err);
 	});
 
-	if (config.redis.password){
+	if (config.redis.password) {
 		redisclient.auth(config.redis.password);
 	}
 
-	function generator(functionname, obj, key, params){
-		return function(){
-			return Reflect.apply(functionname, obj, [connection, params]).then(function(value){
+	function generator(functionname, obj, key, params) {
+		return function() {
+
+            params.connection = connection;
+            params.mongodbclient = mongodbclient;
+            params.config = config;
+
+			return Reflect.apply(functionname, obj, [params]).then(function(value){
 				let newkey = key;
 				if (typeof params === 'object'){
 					newkey = Object.keys(params).reduce(function(p, c){
@@ -49,11 +53,12 @@
 					}, newkey);
 				}
 				logger.log(newkey);
-				redisclient.set(newkey, JSON.stringify(value), redis.print);
-				redispublish.publish(newkey, JSON.stringify(value));
+				const stringfied = JSON.stringify(value);
+				redisclient.set(newkey, stringfied, redis.print);
+				redispublish.publish(newkey, stringfied);
 				redispublish.publish('updates', newkey);
 				if (config.debug){
-					logger.log('Event OK:', newkey, 'The length of the new stored value is:', JSON.stringify(value).length);
+					logger.log('Event OK:', newkey, 'The length of the new stored value is:', stringfied.length);
 				}
 			}, function(err){
 				logger.error(key, err);
@@ -61,88 +66,106 @@
 		};
 	}
 
-	function caller(functionname, obj, key, parameters){
-		return function(){
-			if (typeof parameters === 'undefined'){
-				generator(functionname, obj, key)();
-			} else {
-				let callingparams = [{}];
-				for (const attr in parameters){
-					
-					const possiblevalues = parameters[attr];
+	function caller(functionname, obj, key, parameters) {
+		return function() {
+			if (typeof parameters === 'undefined') {
+				return generator(functionname, obj, key)();
+            }
 
-					const cp = [];
-					do {
-						const p = callingparams.shift();
+            let callingparams = [{}];
+            for (const attr in parameters) {
 
-						for (const value in possiblevalues){
-							p[attr] = possiblevalues[value];
-							cp.push(JSON.parse(JSON.stringify(p)));
-						}
+                const possiblevalues = parameters[attr];
 
-					} while (callingparams.length);
+                const cp = [];
+                do {
+                    const p = callingparams.shift();
 
-					callingparams = cp;
-				}
+                    for (const value in possiblevalues) {
+                        p[attr] = possiblevalues[value];
+                        cp.push(JSON.parse(JSON.stringify(p)));
+                    }
 
-				const fns = callingparams.map(function(p){
-					return generator(functionname, obj, key, p);
-				});
+                } while (callingparams.length);
 
-				fns.reduce(Q.when, Q(0)).then(function(){
-					//logger.log('Every parameter option has been runned');
-				}).fail(function(err){
-					logger.error('fallo', err);
-				});
+                callingparams = cp;
+            }
 
-			}
+            const fns = callingparams.map(function(p) {
+                return generator(functionname, obj, key, p);
+            });
+
+            return Q.all([fns.reduce(Q.when, Q(0)).then(function(){
+                //logger.log('Every parameter option has been runned');
+            }).fail(function(err){
+                logger.error('fallo', err);
+            })]);
 		};
 	}
 
-	function runCommand(cmd){
-
+	function runCommand(cmd) {
 		const p = cmd.trim() === 'runall' ? jobs : jobs.filter(function(job){
-			return job.$.key === cmd;
+			return cmd.indexOf('*') >= 0 ? globToRegExp(cmd).test(job.$.key) : job.$.key === cmd;
 		});
 
-		if (p.length > 0){
-			p.forEach(function(job){
-				const methodname = job.$.method.split('.');
-				const obj = lib[methodname[0]],
-					functionname = lib[methodname[0]][methodname[1]];
+		if (p.length === 0){
+            logger.error('Wrong command:', cmd, 'Enter help for available commands');
 
-				let parameters = false;
+            return Q(false);
+        }
 
-				if (job.parameters){
-					parameters = job.parameters[0].field.reduce(function(prev, parameter){
-						prev[parameter.$.name] = parameter.value;
+		return Q.all(p.map(function(job){
+            const methodname = job.$.method.split('.');
+            const obj = lib[methodname[0]],
+                functionname = lib[methodname[0]][methodname[1]];
 
-						return prev;
-					}, {});
-				}
-				const fn = caller(functionname, obj, job.$.key, parameters);
-				fn();
-			});
-		} else {
-			logger.error('Wrong command:', cmd, 'Enter help for available commands');
-		}
+            let parameters = false;
+
+            if (job.parameters){
+                parameters = job.parameters[0].field.reduce(function(prev, parameter){
+                    prev[parameter.$.name] = parameter.value;
+
+                    return prev;
+                }, {});
+            }
+            const fn = caller(functionname, obj, job.$.key, parameters);
+
+            return fn();
+        }));
 	}
 
 	process.on('SIGINT', function(){
-		connection.close();
+        if (connection) {
+            connection.close();
+        }
+        if (mongodbclient) {
+            mongodbclient.close();
+        }
 		process.exit(0);
 	});
 
-	function connect(){
-		if (config.db.options.logging){
+	function connect() {
+        const Sequelize = require('sequelize');
+
+		if (config.db.options.logging) {
 			config.db.options.logging = logger.log;
 		}
 		connection = new Sequelize(config.db.database, config.db.username, config.db.password, config.db.options);
 
 		Sequelize.Promise = require('q');
-		
+
 		return connection.authenticate();
 	}
+
+    function connectMongo() {
+        const defer = Q.defer();
+        const MongoClient = require('mongodb').MongoClient;
+
+        MongoClient.connect(config.mongodb.url, {useNewUrlParser: true}, defer.makeNodeResolver());
+        defer.promise.then((client) => mongodbclient = client);
+
+        return defer.promise;
+    }
 
 	function loadXML(){
 		const jobsdeferred = Q.defer();
@@ -202,11 +225,24 @@
 		crons = [];
 	}
 
+    function safeexit() {
+        cancelAllCrons();
+        if (connection) {
+            connection.close();
+        }
+        if (mongodbclient) {
+            mongodbclient.close();
+        }
+        process.exit(0);
+    }
+
 	function setJobs(jbs){
 		cancelAllCrons();
 
 		jobs = jbs.jobs.job;
-		crons = jobs.map(function(job){
+		crons = jobs.filter(function (job){
+            return job.$.cron;
+        }).map(function (job){
 			const cronmatching = job.$.cron;
 			const methodname = job.$.method.split('.');
 			const obj = lib[methodname[0]],
@@ -245,11 +281,11 @@
 			});
 		},
 		runall: function(){
-			jobs.map(function(job){
+			return Q.all(jobs.map(function(job){
 				return job.$.key;
-			}).forEach(function(c){
-				runCommand(c);
-			});
+			}).map(function(c){
+				return runCommand(c);
+			}));
 		},
 		help: function(){
 			const comms = Object.keys(supportedCommands).map(function(s){
@@ -260,15 +296,15 @@
 			}).concat(comms);
 
 			logger.log(os.EOL, 'The available options are:', os.EOL);
-			logger.log(options.join(os.EOL));
+            logger.log(options.join(os.EOL));
+
+            return Q(true);
 		},
 		'?': function(){
-			supportedCommands.help();
+			return supportedCommands.help();
 		},
 		quit: function(){
-			cancelAllCrons();
-			connection.close();
-			process.exit(0);
+            safeexit();
 		}
 	};
 
@@ -283,42 +319,101 @@
 		return [hits.length ? hits : options, line];
 	}
 
-	const rl = readline.createInterface({
+	const rl = (process.argv.indexOf('-q') < 0) ? readline.createInterface({
 		input: process.stdin,
 		output: process.stdout,
 		prompt: 'COMMAND> ',
 		completer: completer
-	});
+	}) : false;
 
-	Q.all([loadXML(), connect()]).then(function(content){
+    const loadingSteps = [];
 
-		return xml2jobs(content[0]);
-	}).then(function(jbs){
-		setJobs(jbs);
-		rl.prompt();
-	}).catch(function(err){
-		logger.error(err);
-		process.exit(-1);
-	});
+    loadingSteps.push(loadXML());
+
+    if (config.db && config.db.enabled) {
+        loadingSteps.push(connect());
+    }
+
+    if (config.mongodb && config.mongodb.enabled) {
+        loadingSteps.push(connectMongo());
+    }
+
+    Q.all(loadingSteps)
+        .then((content) => xml2jobs(content[0]))
+        .then(function(jbs){
+            setJobs(jbs);
+            rl && rl.prompt();
+        }).catch(function(err){
+            logger.error(err);
+            process.exit(-1);
+        });
 
 	process.on('exit', function(){
-		cancelAllCrons();
-		connection.close();
+        safeexit()
 	});
 
-	rl.on('line', function(line){
-		if (line.trim() !== ''){
-			const prefix = line.split(' ')[0];
+    function runEnteredCommand(line) {
+        if (line.trim() !== ''){
+			const prefix = line.startsWith('/') ? line.substring(1).split(' ')[0] : line.split(' ')[0];
 
 			if (typeof supportedCommands[prefix] === 'function'){
-				supportedCommands[prefix](line);
-			} else {
-				runCommand(line.trim());
+				return supportedCommands[prefix](line);
 			}
-		}
-		rl.prompt();
-	}).on('close', function(){
-		process.exit(0);
-	});
+
+            return runCommand(line.trim());
+        }
+
+        return Q(true);
+    }
+
+    if (rl) {
+        rl.on('line', function(line){
+            runEnteredCommand(line).then(function() {
+                rl.prompt();
+            }).catch(function(err) {
+                rl.prompt();
+            });
+        }).on('close', function(){
+            process.exit(0);
+        });
+    }
+
+    if (config.server && config.server.enabled) {
+        if (config.server.port) {
+            const app = require('express')();
+            app.get('*', function(req, res) {
+
+                if (req.originalUrl === '/') {
+                    const comms = Object.keys(supportedCommands);
+                    const options = jobs.map(function(job){
+                        return job.$.key;
+                    }).concat(comms);
+
+                    res.json(options);
+                } else {
+                    redisclient.get(req.originalUrl, function(err, val) {
+                        if (err) {
+                            res.status(500).json(err);
+                        } else if (val) {
+                            res.type('application/json').send(val).end();
+                        } else {
+                            res.status(404).type('application/json').send('404').end();
+                        }
+                    });
+                }
+            }).post('*', function(req, res) {
+                runEnteredCommand(req.originalUrl).then(function() {
+                    res.json(req.originalUrl);
+                }).catch(function(err) {
+                    res.status(500).json(err);
+                });
+            });
+
+            app.listen(config.server.port, config.server.bind);
+            logger.error('Listenning on port', config.server.port);
+        } else {
+            logger.error('Cannot listen on unspecified port');
+        }
+    }
 
 })(process, console);
