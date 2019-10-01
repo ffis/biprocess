@@ -7,6 +7,7 @@
     "chai": "^4.0.2",
     "color-scheme": "0.0.5",
     "encrypter": "^1.0.0",
+    "glob-to-regexp": "^0.4.1",
     "mongodb": "^3.3.2",
     "node-schedule": "^1.2.1",
     "q": "^1.5.1",
