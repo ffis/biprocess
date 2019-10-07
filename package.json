@@ -19,7 +19,7 @@
     "xml2js": "^0.4.17"
   },
   "scripts": {
-    "test": "mocha",
+    "test": "./node_modules/mocha/bin/mocha",
     "start": "node index.js"
   },
   "keywords": [
