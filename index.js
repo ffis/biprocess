@@ -7,8 +7,8 @@
 		redis = require('redis'),
 		Q = require('q'),
 		schedule = require('node-schedule'),
-        readline = require('readline'),
-        globToRegExp = require('glob-to-regexp'),
+		readline = require('readline'),
+		globToRegExp = require('glob-to-regexp'),
 		parseString = require('xml2js').parseString,
 		lib = require('require.all')('./routes');
 
@@ -16,6 +16,7 @@
 
 	const redisclient = redis.createClient(config.redis.port, config.redis.host);
 	const redispublish = redis.createClient(config.redis.port, config.redis.host);
+	const redissubscribe = redis.createClient(config.redis.port, config.redis.host);
 
 	const supportedCommandsDescription = {
 		'reload': 'Reload jobs file',
@@ -27,8 +28,8 @@
 
 	let jobs = [],
 		crons = [],
-        connection = false,
-        mongodbclient = false;
+		connection = false,
+		mongodbclient = false;
 
 	redisclient.on('error', function (err) {
 		logger.error('Error REDIS:', err);
@@ -36,14 +37,16 @@
 
 	if (config.redis.password) {
 		redisclient.auth(config.redis.password);
+		redispublish.auth(config.redis.password);
+		redissubscribe.auth(config.redis.password);
 	}
 
 	function generator(functionname, obj, key, params) {
 		return function() {
 
-            params.connection = connection;
-            params.mongodbclient = mongodbclient;
-            params.config = config;
+			params.connection = connection;
+			params.mongodbclient = mongodbclient;
+			params.config = config;
 
 			return Reflect.apply(functionname, obj, [params]).then(function(value){
 				let newkey = key;
@@ -70,36 +73,36 @@
 		return function() {
 			if (typeof parameters === 'undefined') {
 				return generator(functionname, obj, key)();
-            }
+			}
 
-            let callingparams = [{}];
-            for (const attr in parameters) {
+			let callingparams = [{}];
+			for (const attr in parameters) {
 
-                const possiblevalues = parameters[attr];
+				const possiblevalues = parameters[attr];
 
-                const cp = [];
-                do {
-                    const p = callingparams.shift();
+				const cp = [];
+				do {
+					const p = callingparams.shift();
 
-                    for (const value in possiblevalues) {
-                        p[attr] = possiblevalues[value];
-                        cp.push(JSON.parse(JSON.stringify(p)));
-                    }
+					for (const value in possiblevalues) {
+						p[attr] = possiblevalues[value];
+						cp.push(JSON.parse(JSON.stringify(p)));
+					}
 
-                } while (callingparams.length);
+				} while (callingparams.length);
 
-                callingparams = cp;
-            }
+				callingparams = cp;
+			}
 
-            const fns = callingparams.map(function(p) {
-                return generator(functionname, obj, key, p);
-            });
+			const fns = callingparams.map(function(p) {
+				return generator(functionname, obj, key, p);
+			});
 
-            return Q.all([fns.reduce(Q.when, Q(0)).then(function(){
-                //logger.log('Every parameter option has been runned');
-            }).fail(function(err){
-                logger.error('fallo', err);
-            })]);
+			return Q.all([fns.reduce(Q.when, Q(0)).then(function(){
+				//logger.log('Every parameter option has been runned');
+			}).fail(function(err){
+				logger.error('fallo', err);
+			})]);
 		};
 	}
 
@@ -109,43 +112,44 @@
 		});
 
 		if (p.length === 0){
-            logger.error('Wrong command:', cmd, 'Enter help for available commands');
+			logger.error('Wrong command:', cmd, 'Enter help for available commands');
 
-            return Q(false);
-        }
+			return Q(false);
+		}
 
 		return Q.all(p.map(function(job){
-            const methodname = job.$.method.split('.');
-            const obj = lib[methodname[0]],
-                functionname = lib[methodname[0]][methodname[1]];
+			const methodname = job.$.method.split('.');
+			const obj = lib[methodname[0]],
+				functionname = lib[methodname[0]][methodname[1]];
 
-            let parameters = false;
+			let parameters = false;
 
-            if (job.parameters){
-                parameters = job.parameters[0].field.reduce(function(prev, parameter){
-                    prev[parameter.$.name] = parameter.value;
+			if (job.parameters){
+				parameters = job.parameters[0].field.reduce(function(prev, parameter){
+					prev[parameter.$.name] = parameter.value;
 
-                    return prev;
-                }, {});
-            }
-            const fn = caller(functionname, obj, job.$.key, parameters);
+					return prev;
+				}, {});
+			}
+			const fn = caller(functionname, obj, job.$.key, parameters);
 
-            return fn();
-        }));
+			return fn();
+		}));
 	}
 
 	process.on('SIGINT', function(){
-        if (connection) {
-            connection.close();
-        }
-        if (mongodbclient) {
-            mongodbclient.close();
-        }
+		if (connection) {
+			connection.close();
+		}
+		if (mongodbclient) {
+			mongodbclient.close();
+		}
+
 		process.exit(0);
 	});
 
 	function connect() {
-        const Sequelize = require('sequelize');
+		const Sequelize = require('sequelize');
 
 		if (config.db.options.logging) {
 			config.db.options.logging = logger.log;
@@ -157,15 +161,13 @@
 		return connection.authenticate();
 	}
 
-    function connectMongo() {
-        const defer = Q.defer();
-        const MongoClient = require('mongodb').MongoClient;
+	function connectMongo() {
+		const MongoClient = require('mongodb').MongoClient;
 
-        MongoClient.connect(config.mongodb.url, {useNewUrlParser: true}, defer.makeNodeResolver());
-        defer.promise.then((client) => mongodbclient = client);
-
-        return defer.promise;
-    }
+		return MongoClient
+			.connect(config.mongodb.url, {useNewUrlParser: true, useUnifiedTopology: true})
+			.then((client) => mongodbclient = client);
+	}
 
 	function loadXML(){
 		const jobsdeferred = Q.defer();
@@ -225,24 +227,28 @@
 		crons = [];
 	}
 
-    function safeexit() {
-        cancelAllCrons();
-        if (connection) {
-            connection.close();
-        }
-        if (mongodbclient) {
-            mongodbclient.close();
-        }
-        process.exit(0);
-    }
+	function safeexit() {
+		cancelAllCrons();
+		if (connection) {
+			connection.close();
+		}
+		if (mongodbclient) {
+			mongodbclient.close();
+		}
+		redisclient.quit();
+		redispublish.quit();
+		redissubscribe.quit();
+
+		process.exit(0);
+	}
 
 	function setJobs(jbs){
 		cancelAllCrons();
 
 		jobs = jbs.jobs.job;
 		crons = jobs.filter(function (job){
-            return job.$.cron;
-        }).map(function (job){
+			return job.$.cron;
+		}).map(function (job){
 			const cronmatching = job.$.cron;
 			const methodname = job.$.method.split('.');
 			const obj = lib[methodname[0]],
@@ -296,15 +302,15 @@
 			}).concat(comms);
 
 			logger.log(os.EOL, 'The available options are:', os.EOL);
-            logger.log(options.join(os.EOL));
+			logger.log(options.join(os.EOL));
 
-            return Q(true);
+			return Q(true);
 		},
 		'?': function(){
 			return supportedCommands.help();
 		},
 		quit: function(){
-            safeexit();
+			safeexit();
 		}
 	};
 
@@ -326,94 +332,118 @@
 		completer: completer
 	}) : false;
 
-    const loadingSteps = [];
+	const loadingSteps = [];
 
-    loadingSteps.push(loadXML());
+	loadingSteps.push(loadXML());
 
-    if (config.db && config.db.enabled) {
-        loadingSteps.push(connect());
-    }
+	if (config.db && config.db.enabled) {
+		loadingSteps.push(connect());
+	}
 
-    if (config.mongodb && config.mongodb.enabled) {
-        loadingSteps.push(connectMongo());
-    }
+	if (config.mongodb && config.mongodb.enabled) {
+		loadingSteps.push(connectMongo());
+	}
 
-    Q.all(loadingSteps)
-        .then((content) => xml2jobs(content[0]))
-        .then(function(jbs){
-            setJobs(jbs);
-            rl && rl.prompt();
-        }).catch(function(err){
-            logger.error(err);
-            process.exit(-1);
-        });
+	Q.all(loadingSteps)
+		.then((content) => xml2jobs(content[0]))
+		.then(function(jbs){
+			setJobs(jbs);
+			rl && rl.prompt();
+		}).catch(function(err){
+			logger.error(err);
+			process.exit(-1);
+		});
 
 	process.on('exit', function(){
-        safeexit()
+		safeexit();
 	});
 
-    function runEnteredCommand(line) {
-        if (line.trim() !== ''){
+	function runEnteredCommand(line) {
+		if (line.trim() !== ''){
 			const prefix = line.startsWith('/') ? line.substring(1).split(' ')[0] : line.split(' ')[0];
 
 			if (typeof supportedCommands[prefix] === 'function'){
 				return supportedCommands[prefix](line);
 			}
 
-            return runCommand(line.trim());
-        }
+			return runCommand(line.trim());
+		}
 
-        return Q(true);
-    }
+		return Q(true);
+	}
 
-    if (rl) {
-        rl.on('line', function(line){
-            runEnteredCommand(line).then(function() {
-                rl.prompt();
-            }).catch(function(err) {
-                rl.prompt();
-            });
-        }).on('close', function(){
-            process.exit(0);
-        });
-    }
+	if (rl) {
+		rl.on('line', function(line){
+			runEnteredCommand(line).then(function() {
+				rl.prompt();
+			}).catch(function(err) {
+				rl.prompt();
+			});
+		}).on('close', function(){
+			process.exit(0);
+		});
+	}
 
-    if (config.server && config.server.enabled) {
-        if (config.server.port) {
-            const app = require('express')();
-            app.get('*', function(req, res) {
+	const channels2subscribe = config.redis.channels && Array.isArray(config.redis.channels.listen) ? config.redis.channels.listen : [];
+	channels2subscribe.forEach((channel) => {
+		redissubscribe.subscribe(channel);
+	});
 
-                if (req.originalUrl === '/') {
-                    const comms = Object.keys(supportedCommands);
-                    const options = jobs.map(function(job){
-                        return job.$.key;
-                    }).concat(comms);
+	if (channels2subscribe.length > 0) {
+		redissubscribe.on('message', (channel, message) => {
+			if (jobs && Array.isArray(jobs)) {
+				const triggeredJobs = jobs.filter((j) => j.triggers && j.triggers.filter((trigger) => trigger.on.filter((event) => event.$.action === channel && message.includes(event.$.contains)).length > 0).length > 0);
 
-                    res.json(options);
-                } else {
-                    redisclient.get(req.originalUrl, function(err, val) {
-                        if (err) {
-                            res.status(500).json(err);
-                        } else if (val) {
-                            res.type('application/json').send(val).end();
-                        } else {
-                            res.status(404).type('application/json').send('404').end();
-                        }
-                    });
-                }
-            }).post('*', function(req, res) {
-                runEnteredCommand(req.originalUrl).then(function() {
-                    res.json(req.originalUrl);
-                }).catch(function(err) {
-                    res.status(500).json(err);
-                });
-            });
+				triggeredJobs.forEach((job) => {
+					runCommand(job.$.key);
+				});
+			}
+		});
+	}
 
-            app.listen(config.server.port, config.server.bind);
-            logger.error('Listenning on port', config.server.port);
-        } else {
-            logger.error('Cannot listen on unspecified port');
-        }
-    }
+	if (config.server && config.server.enabled) {
+		if (config.server.port) {
+			const app = require('express')();
+			app.get('*', function(req, res) {
+
+				if (req.originalUrl === '/') {
+					const comms = Object.keys(supportedCommands);
+					const options = jobs.map(function(job){
+						return job.$.key;
+					}).concat(comms);
+
+					res.json(options);
+				} else {
+					redisclient.get(req.originalUrl, function(err, val) {
+						if (err) {
+							res.status(500).json(err);
+						} else if (val) {
+							res.type('application/json').send(val).end();
+						} else {
+							res.status(404).type('application/json').send('404').end();
+						}
+					});
+				}
+			}).post('*', function(req, res) {
+				runEnteredCommand(req.originalUrl).then(function() {
+					res.json(req.originalUrl);
+				}).catch(function(err) {
+					res.status(500).json(err);
+				});
+			});
+
+			app.listen(config.server.port, config.server.bind);
+			logger.error('Listenning on port', config.server.port);
+		} else {
+			logger.error('Cannot listen on unspecified port');
+		}
+	}
+
+	process.on('uncaughtException', (s) => {
+		console.error('uncaughtException');
+		console.error(s);
+
+		throw s;
+	});
 
 })(process, console);

@@ -13,7 +13,10 @@
 	"redis": {
 		"host": "localhost",
 		"port": 6379,
-		"no_ready_check": true
+		"no_ready_check": true,
+		"channels": {
+			"listen": ["create", "update"]
+		}
 	},
 	"debug": false
 }

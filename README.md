@@ -42,7 +42,7 @@ If tests ran flawlessly then just keep the daemon running with something like:
 ```bash
 sudo npm i -g mocha forever
 npm test 				# run some tests to check everything is properly configured
-forever index.js
+pm2 start --name biprocess index.js
 ```
 
 
@@ -54,25 +54,37 @@ The file that configures how to connect to the different services is _config.jso
 ```json
 {
 	"db": {
+		"enabled": true,
 		"database": "",
 		"username": "",
 		"password": "",
 		"options": {
 			"dialect": "mssql",
 			"host": "localhost",
-			"operatorsAliases": false,
 			"logging": false
 		}
 	},
+	"mongodb": {
+        "enabled": true,
+		"url": "mongodb://user:pass@server:27017/db",
+        "database": "db"
+    },
 	"redis": {
 		"host": "localhost",
 		"port": 6379,
-		"no_ready_check": true
+		"no_ready_check": true,
+		"channels": {
+			"listen": ["create", "update"]
+		}
 	},
 	"debug": true,
-	"jobsDirectory": "jobs/"
+	"jobsDirectory": "jobs/",
+	"server" : {
+        "enabled": true,
+        "port": 7890,
+		"bind": "127.0.0.1"
+    }
 }
-
 ```
 
 You should change the properties according to your infrastructure and services stack.
