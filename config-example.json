@@ -15,7 +15,7 @@
 		"port": 6379,
 		"no_ready_check": true,
 		"channels": {
-			"listen": ["create", "update"]
+			"listen": ["create", "update", "delete"]
 		}
 	},
 	"debug": false

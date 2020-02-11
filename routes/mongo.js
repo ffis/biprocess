@@ -11,9 +11,10 @@
             collection = parameters.collection,
             project = parameters.project || '{}',
             filter = parameters.filter || '{}',
-            sort = parameters.sort || '{}';
+            sort = parameters.sort || '{}',
+            limit = parameters.limit || 0;
 
-        return findAndReturnAsPromise(client, dbname, collection, JSON.parse(project), JSON.parse(filter), JSON.parse(sort));
+        return findAndReturnAsPromise(client, dbname, collection, JSON.parse(project), JSON.parse(filter), JSON.parse(sort), JSON.parse(limit));
     };
 
     module.exports.genericAggregate = function(parameters) {
