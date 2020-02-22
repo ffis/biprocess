@@ -163,9 +163,10 @@
 
 	function connectMongo() {
 		const MongoClient = require('mongodb').MongoClient;
+		const options = config.mongodb.options ? config.mongodb.options : {useNewUrlParser: true, useUnifiedTopology: true};
 
 		return MongoClient
-			.connect(config.mongodb.url, {useNewUrlParser: true, useUnifiedTopology: true})
+			.connect(config.mongodb.url, options)
 			.then((client) => mongodbclient = client);
 	}
 

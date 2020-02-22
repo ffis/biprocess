@@ -10,6 +10,12 @@
 			"logging": false
 		}
 	},
+    "mongodb": {
+        "enabled": true,
+		"url": "mongodb://user:pass@server:27017/db",
+        "database": "db",
+        "options": {"useNewUrlParser": true, "useUnifiedTopology": true}
+    },
 	"redis": {
 		"host": "localhost",
 		"port": 6379,
