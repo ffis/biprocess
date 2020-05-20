@@ -1,21 +1,22 @@
 {
   "name": "biprocess",
-  "version": "1.3.0",
+  "version": "1.3.1",
   "description": "",
   "main": "index.js",
   "dependencies": {
+    "bcrypt": "^4.0.1",
     "chai": "^4.2.0",
-    "color-scheme": "0.0.5",
     "encrypter": "^1.0.0",
     "express": "^4.17.1",
     "glob-to-regexp": "^0.4.1",
-    "mongodb": "^3.5.3",
+    "mocha": "^7.1.2",
+    "mongodb": "^3.5.7",
     "node-schedule": "^1.3.2",
     "q": "^1.5.1",
-    "redis": "^2.4.2",
+    "redis": "^3.0.2",
     "require.all": "^2.0.5",
     "saslprep": "^1.0.3",
-    "sequelize": "^5.21.5",
+    "sequelize": "^5.21.10",
     "tedious": "^6.7.0",
     "xml2js": "^0.4.23"
   },
@@ -31,7 +32,5 @@
   ],
   "author": "loksly@gmail.com",
   "license": "MIT",
-  "devDependencies": {
-    "mocha": "^6.2.2"
-  }
+  "devDependencies": {}
 }
