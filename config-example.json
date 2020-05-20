@@ -11,7 +11,8 @@
 			"dialectOptions": {
 				"encrypt": false,
 				"options": {
-					"enableArithAbort": true
+					"enableArithAbort": true,
+					"trustServerCertificate": true
 				}
 			}
 		}
