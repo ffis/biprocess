@@ -19,7 +19,7 @@
 			before(function(){
 			});
 			it('should be able to connect', function(done){
-				client = redis.createClient(config.redis.port, config.redis.host, config.redis.parameters);
+				client = redis.createClient(config.redis);
 				client.on('error', function (err) {
 					should(err).not.exist();
 				});

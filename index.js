@@ -48,7 +48,7 @@
 			params.mongodbclient = mongodbclient;
 			params.config = config;
 
-			return Reflect.apply(functionname, obj, [params]).then(function(value){
+			return Reflect.apply(functionname, obj, [params]).then(function(value) {
 				let newkey = key;
 				if (typeof params === 'object'){
 					newkey = Object.keys(params).reduce(function(p, c){
@@ -63,7 +63,7 @@
 				if (config.debug){
 					logger.log('Event OK:', newkey, 'The length of the new stored value is:', stringfied.length);
 				}
-			}, function(err){
+			}, (err) => {
 				logger.error(key, err);
 			});
 		};
@@ -167,7 +167,7 @@
 
 		return MongoClient
 			.connect(config.mongodb.url, options)
-			.then((client) => mongodbclient = client);
+			.then((client) => { mongodbclient = client; });
 	}
 
 	function loadXML(){
@@ -199,7 +199,7 @@
 
 	function xml2jobs(xml){
 		if (typeof xml === 'object' && Array.isArray(xml)){
-			return Q.all(xml.map(function(data){
+			return Promise.all(xml.map((data) => {
 				const paserDefer = Q.defer();
 
 				parseString(data, paserDefer.makeNodeResolver());
