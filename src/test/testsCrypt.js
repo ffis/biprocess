@@ -9,8 +9,7 @@ usage: mocha testCrypt.js
 (function(process, logger){
 	"use strict";
 	const expect = require("chai").expect,
-		cryptlib = require("../lib/cryptlib"),
-		config = require("../config.json");
+		cryptlib = require("../lib/cryptlib");
 
 	if (typeof describe === "function"){
 		describe("Crypt", function(){

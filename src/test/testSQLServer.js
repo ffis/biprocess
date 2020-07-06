@@ -10,7 +10,7 @@
 		chai = require('chai'),
 		expect = chai.expect,
 		should = chai.should,
-		config = require(path.join(__dirname, '..', 'config.json'));
+		config = require(path.join(__dirname, '..', '..', 'config.json'));
 
 	if (config.db.options.logging){
 		config.db.options.logging = console.log;
