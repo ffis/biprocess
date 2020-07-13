@@ -11,16 +11,46 @@ import { calculateKey, loadXML, xml2jobs } from "./utils";
 
 import * as readline from "readline";
 import { scheduleJob } from "node-schedule";
-import { resolve } from "path";
+import { isAbsolute, resolve } from "path";
 import { readFileSync } from "fs";
 import { JobList, JobElement } from "./types";
+
+import { Command } from "commander";
 
 const
 	Q = require("q"),
 	globToRegExp = require("glob-to-regexp"),
 	lib = require("require.all")("./routes");
 
-const config = JSON.parse(readFileSync(resolve(__dirname, "..", "config.json"), "utf-8"));
+const packagedescription = JSON.parse(readFileSync(resolve(__dirname, "..", "package.json"), "utf-8"));
+
+const program = new Command();
+
+program
+	.version(packagedescription.version)
+	.option("-c, --config <file>", "Sets the config file this program will use")
+	.option("-q, --quiet", "Disable interactive shell");
+
+program.parse(process.argv);
+
+if (!program.config) {
+	console.error("You need to provide a config file. Use --help parameter for further information.");
+	process.exit(1);
+}
+
+let config;
+
+try {
+	const where = isAbsolute(program.config) ? program.config : resolve(process.cwd(), program.config);
+	console.debug(where);
+	config = JSON.parse(readFileSync(where, "utf-8"));
+} catch (err) {
+	console.error("You need to provide a valid config file. Use --help parameter for further information.");
+	console.debug(err.message);
+	process.exit(2);
+}
+
+const quiet = program.quiet;
 
 const redisclient: RedisClient = createClient(config.redis);
 const redispublish: RedisClient = createClient(config.redis);
@@ -241,12 +271,12 @@ function completer(line: string) {
 	return [hits.length ? hits : options, line];
 }
 
-const rl = (process.argv.indexOf("-q") < 0) ? readline.createInterface({
+const rl = (quiet < 0) ? readline.createInterface({
 	input: process.stdin,
 	output: process.stdout,
 	prompt: "COMMAND> ",
 	completer: completer
-}) : false;
+}) : null;
 
 const loadingSteps = [];
 
@@ -291,7 +321,7 @@ function runEnteredCommand(line: string) {
 if (rl) {
 	rl.on("line", function (line) {
 		runEnteredCommand(line).finally(() => {
-			rl.prompt();
+			rl && rl.prompt();
 		});
 	}).on("close", function () {
 		process.exit(0);

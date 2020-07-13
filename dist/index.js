@@ -10,8 +10,31 @@ var readline = require("readline");
 var node_schedule_1 = require("node-schedule");
 var path_1 = require("path");
 var fs_1 = require("fs");
+var commander_1 = require("commander");
 var Q = require("q"), globToRegExp = require("glob-to-regexp"), lib = require("require.all")("./routes");
-var config = JSON.parse(fs_1.readFileSync(path_1.resolve(__dirname, "..", "config.json"), "utf-8"));
+var packagedescription = JSON.parse(fs_1.readFileSync(path_1.resolve(__dirname, "..", "package.json"), "utf-8"));
+var program = new commander_1.Command();
+program
+    .version(packagedescription.version)
+    .option("-c, --config <file>", "Sets the config file this program will use")
+    .option("-q, --quiet", "Disable interactive shell");
+program.parse(process.argv);
+if (!program.config) {
+    console.error("You need to provide a config file. Use --help parameter for further information.");
+    process.exit(1);
+}
+var config;
+try {
+    var where = path_1.isAbsolute(program.config) ? program.config : path_1.resolve(process.cwd(), program.config);
+    console.debug(where);
+    config = JSON.parse(fs_1.readFileSync(where, "utf-8"));
+}
+catch (err) {
+    console.error("You need to provide a valid config file. Use --help parameter for further information.");
+    console.debug(err.message);
+    process.exit(2);
+}
+var quiet = program.quiet;
 var redisclient = redis_1.createClient(config.redis);
 var redispublish = redis_1.createClient(config.redis);
 var redissubscribe;
@@ -185,12 +208,12 @@ function completer(line) {
     var hits = options.filter(function (c) { return c.startsWith(line); });
     return [hits.length ? hits : options, line];
 }
-var rl = (process.argv.indexOf("-q") < 0) ? readline.createInterface({
+var rl = (quiet < 0) ? readline.createInterface({
     input: process.stdin,
     output: process.stdout,
     prompt: "COMMAND> ",
     completer: completer
-}) : false;
+}) : null;
 var loadingSteps = [];
 loadingSteps.push(utils_1.loadXML(config));
 if (config.db && config.db.enabled) {
@@ -224,7 +247,7 @@ function runEnteredCommand(line) {
 if (rl) {
     rl.on("line", function (line) {
         runEnteredCommand(line).finally(function () {
-            rl.prompt();
+            rl && rl.prompt();
         });
     }).on("close", function () {
         process.exit(0);
