@@ -42,10 +42,8 @@ If tests ran flawlessly then just keep the daemon running with something like:
 ```bash
 sudo npm i -g mocha forever
 npm test 				# run some tests to check everything is properly configured
-pm2 start --name biprocess index.js
+pm2 start --name biprocess index.js -c config.json
 ```
-
-
 
 ## How to configure config.json
 
