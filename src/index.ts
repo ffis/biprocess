@@ -17,10 +17,9 @@ import { JobList, JobElement } from "./types";
 
 import { Command } from "commander";
 
-const
-	Q = require("q"),
-	globToRegExp = require("glob-to-regexp"),
-	lib = require("require.all")("./routes");
+import GlobToRegExp = require("glob-to-regexp");
+
+const lib = require("require.all")("./routes");
 
 const packagedescription = JSON.parse(readFileSync(resolve(__dirname, "..", "package.json"), "utf-8"));
 
@@ -128,7 +127,7 @@ function caller(functionname: Function, obj: any, key: string, parameters?: { [k
 }
 
 function runCommand(cmd: string): Promise<void> {
-	const coincidences = cmd.trim() === "runall" ? jobs : jobs.filter((job) => cmd.indexOf("*") >= 0 ? globToRegExp(cmd).test(job.$.key) : job.$.key === cmd);
+	const coincidences = cmd.trim() === "runall" ? jobs : jobs.filter((job) => cmd.indexOf("*") >= 0 ? GlobToRegExp(cmd).test(job.$.key) : job.$.key === cmd);
 
 	if (coincidences.length === 0) {
 		console.error("Wrong command:", cmd, "Enter help for available commands");

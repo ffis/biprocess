@@ -11,7 +11,8 @@ var node_schedule_1 = require("node-schedule");
 var path_1 = require("path");
 var fs_1 = require("fs");
 var commander_1 = require("commander");
-var Q = require("q"), globToRegExp = require("glob-to-regexp"), lib = require("require.all")("./routes");
+var GlobToRegExp = require("glob-to-regexp");
+var lib = require("require.all")("./routes");
 var packagedescription = JSON.parse(fs_1.readFileSync(path_1.resolve(__dirname, "..", "package.json"), "utf-8"));
 var program = new commander_1.Command();
 program
@@ -95,7 +96,7 @@ function caller(functionname, obj, key, parameters) {
     };
 }
 function runCommand(cmd) {
-    var coincidences = cmd.trim() === "runall" ? jobs : jobs.filter(function (job) { return cmd.indexOf("*") >= 0 ? globToRegExp(cmd).test(job.$.key) : job.$.key === cmd; });
+    var coincidences = cmd.trim() === "runall" ? jobs : jobs.filter(function (job) { return cmd.indexOf("*") >= 0 ? GlobToRegExp(cmd).test(job.$.key) : job.$.key === cmd; });
     if (coincidences.length === 0) {
         console.error("Wrong command:", cmd, "Enter help for available commands");
         return Promise.resolve();
