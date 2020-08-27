@@ -4,8 +4,9 @@ import { promises } from "fs";
 import { resolve } from "path";
 import { promisify } from "util";
 import { JobList } from "./types";
+import { Config } from "./config";
 
-export function loadXML(config): Promise<string | string[]> {
+export function loadXML(config: Config): Promise<string | string[]> {
 
     if (config.jobsDirectory){
         return loadFromJobsDirectory(config);
@@ -14,7 +15,7 @@ export function loadXML(config): Promise<string | string[]> {
     return loadFromJobsFile();
 }
 
-function loadFromJobsDirectory(config): Promise<string[]> {
+function loadFromJobsDirectory(config: Config): Promise<string[]> {
     return promises.readdir(resolve(__dirname, "..", config.jobsDirectory)).then((files) => {
         return Promise.all(
             files

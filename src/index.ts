@@ -5,19 +5,21 @@ import { createClient, RedisClient, print } from "redis";
 import { connect, MongoClient, MongoClientOptions } from "mongodb";
 import { Sequelize } from "sequelize";
 import { Request, Response} from "express";
-import * as express from "express";
+import express = require("express");
 
 import { calculateKey, loadXML, xml2jobs } from "./utils";
 
 import * as readline from "readline";
-import { scheduleJob } from "node-schedule";
-import { isAbsolute, resolve } from "path";
+import { scheduleJob, Job } from "node-schedule";
+import { resolve } from "path";
 import { readFileSync } from "fs";
-import { JobList, JobElement } from "./types";
-
 import { Command } from "commander";
 
+import { JobList, JobElement } from "./types";
+
 import GlobToRegExp = require("glob-to-regexp");
+
+import { Config, getConfig } from "./config";
 
 const lib = require("require.all")("./routes");
 
@@ -37,26 +39,14 @@ if (!program.config) {
 	process.exit(1);
 }
 
-let config;
-
-try {
-	const where = isAbsolute(program.config) ? program.config : resolve(process.cwd(), program.config);
-	console.debug(where);
-	config = JSON.parse(readFileSync(where, "utf-8"));
-} catch (err) {
-	console.error("You need to provide a valid config file. Use --help parameter for further information.");
-	console.debug(err.message);
-	process.exit(2);
-}
-
-const quiet = program.quiet;
+const config: Config = getConfig(program.config);
 
 const redisclient: RedisClient = createClient(config.redis);
 const redispublish: RedisClient = createClient(config.redis);
 
 let redissubscribe: RedisClient;
 
-const supportedCommandsDescription = {
+const supportedCommandsDescription: {[s: string]: string} = {
 	"reload": "Reload jobs file",
 	"runall": "Runs all available commands",
 	"help": "Show the list of available commands",
@@ -65,11 +55,11 @@ const supportedCommandsDescription = {
 };
 
 let jobs: JobElement[] = [];
-let crons = [];
+let crons: Job[] = [];
 let connection: Sequelize;
 let mongodbclient: MongoClient;
 
-function generator(functionname: Function, obj: any, basekey: string, params?: { [key: string]: any }) {
+function generator(functionname: Function, obj: any, basekey: string, params: { [key: string]: any }) {
 	return function (): Promise<void> {
 		params.config = config;
 		params.connection = connection;
@@ -90,13 +80,13 @@ function generator(functionname: Function, obj: any, basekey: string, params?: {
 			if (config.debug) {
 				console.log("Event OK:", newkey, "The length of the new stored value is:", stringfied.length);
 			}
-		}, (err) => {
+		}, (err: Error) => {
 			console.error(basekey, err);
 		});
 	};
 }
 
-function caller(functionname: Function, obj: any, key: string, parameters?: { [key: string]: string[] }) {
+function caller(functionname: Function, obj: any, key: string, parameters?: { [key: string]: string[] } | null) {
 	return function (): Promise<void> {
 		if (typeof parameters === "undefined") {
 			return generator(functionname, obj, key, {})();
@@ -108,14 +98,14 @@ function caller(functionname: Function, obj: any, key: string, parameters?: { [k
 
 			const cp = [];
 			do {
-				const p = callingparams.shift();
+				const p: {[s: string]: string} = callingparams.shift()!;
 
 				for (const value in possiblevalues) {
 					p[attr] = possiblevalues[value];
 					cp.push(JSON.parse(JSON.stringify(p)));
 				}
 
-			} while (callingparams.length);
+			} while (callingparams.length > 0);
 
 			callingparams = cp;
 		}
@@ -143,7 +133,7 @@ function runCommand(cmd: string): Promise<void> {
 		let parameters = null;
 
 		if (job.parameters) {
-			parameters = job.parameters[0].field.reduce((prev, parameter) => {
+			parameters = job.parameters[0].field.reduce((prev: {[s: string]: any}, parameter) => {
 				prev[parameter.$.name] = parameter.value;
 
 				return prev;
@@ -155,10 +145,6 @@ function runCommand(cmd: string): Promise<void> {
 }
 
 function connectSQL(): Promise<void> {
-
-	if (config.db.options.logging) {
-		config.db.options.logging = console.log;
-	}
 	connection = new Sequelize(config.db.database, config.db.username, config.db.password, config.db.options);
 
 	return connection.authenticate();
@@ -197,37 +183,40 @@ function setJobs(jbs: JobList): Promise<void> {
 	cancelAllCrons();
 
 	jobs = jbs.jobs.job;
-	crons = jobs.filter(function (job) {
-		return job.$.cron;
-	}).map(function (job) {
+	crons = jobs.reduce((p: Job[], job: JobElement) => {
+		if (!job.$.cron) {
+			return p;
+		}
 		const cronmatching: string = job.$.cron;
 		const methodname = job.$.method.split(".");
 		const obj = lib[methodname[0]];
 		const functionname = typeof lib[methodname[0]][methodname[1]] === "undefined" ? false : lib[methodname[0]][methodname[1]];
-		let parameters: {[id: string]: string[]} = null;
 
 		if (!obj || !functionname) {
 			console.error("Bad configuration!", methodname[0], methodname[1]);
 
-			return false;
+			return p;
 		}
 
-		if (job.parameters) {
-			parameters = job.parameters[0].field.reduce(function (prev, parameter) {
-				prev[parameter.$.name] = parameter.value;
+		const parameters: {[id: string]: string[]}| null = (job.parameters) ?
+			job.parameters[0].field.reduce((prev: {[s: string]: string[]}, parameter) => {
+				const idx: string = parameter.$.name.valueOf();
+				prev[idx] = parameter.value;
 
 				return prev;
-			}, {});
-		}
+			}, {}) : null;
+
 		const fn = caller(functionname, obj, job.$.key, parameters);
 
-		return scheduleJob(cronmatching, fn);
-	}).filter((a) => a);
+		p.push(scheduleJob(cronmatching, fn));
+
+		return p;
+	}, [] as Job[]);
 
 	return Promise.resolve();
 }
 
-const supportedCommands = {
+const supportedCommands: {[s: string]: () => Promise<void>} = {
 	reload: function () {
 		return loadXML(config)
 			.then((content) => xml2jobs(content))
@@ -238,7 +227,7 @@ const supportedCommands = {
 			});
 	},
 	runall: function () {
-		return Promise.all(jobs.map((job) => job.$.key).map((c) => runCommand(c)));
+		return Promise.all(jobs.map((job) => job.$.key).map((c) => runCommand(c))).then(() => {});
 	},
 	help: function () {
 		const comms = Object.keys(supportedCommands).map(function (s) {
@@ -251,13 +240,15 @@ const supportedCommands = {
 		console.log(EOL, "The available options are:", EOL);
 		console.log(options.join(EOL));
 
-		return Promise.resolve(true);
+		return Promise.resolve();
 	},
 	"?": function () {
 		return supportedCommands.help();
 	},
 	quit: function () {
 		safeexit();
+
+		return Promise.resolve();
 	}
 };
 
@@ -270,16 +261,14 @@ function completer(line: string) {
 	return [hits.length ? hits : options, line];
 }
 
-const rl = (quiet < 0) ? readline.createInterface({
+const rl = (program.quiet < 0) ? readline.createInterface({
 	input: process.stdin,
 	output: process.stdout,
 	prompt: "COMMAND> ",
 	completer: completer
 }) : null;
 
-const loadingSteps = [];
-
-loadingSteps.push(loadXML(config));
+const loadingSteps: Promise<void>[] = [];
 
 if (config.db && config.db.enabled) {
 	loadingSteps.push(connectSQL());
@@ -290,6 +279,7 @@ if (config.mongodb && config.mongodb.enabled) {
 }
 
 Promise.all(loadingSteps)
+	.then(() => loadXML(config))
 	.then((content) => xml2jobs(content[0]))
 	.then((jbs: JobList) => setJobs(jbs))
 	.then(() => {
@@ -303,18 +293,18 @@ process.on("exit", () => {
 	safeexit();
 });
 
-function runEnteredCommand(line: string) {
+function runEnteredCommand(line: string): Promise<void> {
 	if (line.trim() !== "") {
 		const prefix = line.startsWith("/") ? line.substring(1).split(" ")[0] : line.split(" ")[0];
 
 		if (typeof supportedCommands[prefix] === "function") {
-			return supportedCommands[prefix](line);
+			return supportedCommands[prefix]();
 		}
 
 		return runCommand(line.trim());
 	}
 
-	return Promise.resolve(true);
+	return Promise.resolve();
 }
 
 if (rl) {
@@ -349,7 +339,7 @@ if (channels2subscribe.length > 0) {
 if (config.server && config.server.enabled) {
 	if (config.server.port) {
 		const app = express();
-		app.get("*", function (req, res) {
+		app.get("*", function (req: Request, res: Response) {
 
 			if (req.originalUrl === "/") {
 				const comms = Object.keys(supportedCommands);
@@ -370,7 +360,7 @@ if (config.server && config.server.enabled) {
 		}).post("*", (req: Request, res: Response) => {
 			runEnteredCommand(req.originalUrl).then(() => {
 				res.json(req.originalUrl);
-			}).catch((err) => {
+			}).catch((err: Error) => {
 				res.status(500).json(err);
 			});
 		});

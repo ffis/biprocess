@@ -1,30 +1,22 @@
 
-const bcrypt = require("bcrypt");
-const Cryptr = require("cryptr");
+import bcrypt = require("bcrypt");
+import Cryptr = require("cryptr");
 
-export function cryptPassword(password, callback) {
-	bcrypt.genSalt(10, function(err, salt) {
-		if (err){
-			return callback(err);
-		}
-
-		bcrypt.hash(password, salt, callback);
-	});
+export function cryptPassword(password: string): Promise<string> {
+	return bcrypt.genSalt(10).then((salt) => bcrypt.hash(password, salt));
 }
 
-export function comparePassword(password, userPassword, callback) {
-	bcrypt.compare(password, userPassword, function(err, isPasswordMatch) {
-		return (err) ? callback(err) : callback(null, isPasswordMatch);
-	});
+export function comparePassword(password: string, userPassword: string): Promise<boolean> {
+	return bcrypt.compare(password, userPassword);
 }
 
-export function crypt(password, content){
+export function crypt(password: string, content: string): string {
 	const c = new Cryptr(password);
 
 	return c.encrypt(content);
 }
 
-export function decrypt(password, content){
+export function decrypt(password: string, content: string): string {
 	const c = new Cryptr(password);
 
 	return c.decrypt(content);

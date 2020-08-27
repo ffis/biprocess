@@ -1,7 +1,21 @@
 
 import { aggregateAndReturnAsPromise, findAndReturnAsPromise } from "../lib/mongo";
+import { JobParameters } from "../types";
 
-export function genericFind(parameters) {
+export interface GenericFindParameters extends JobParameters {
+    collection: string;
+    project?: string;
+    filter?: string;
+    sort?: string;
+    limit?: number;
+}
+
+export interface GenericAggregateParameters extends JobParameters {
+    collection: string;
+    pipeline?: string;
+}
+
+export function genericFind(parameters: GenericFindParameters) {
 
     const client = parameters.mongodbclient,
         dbname = parameters.dbname,
@@ -11,10 +25,10 @@ export function genericFind(parameters) {
         sort = parameters.sort || '{}',
         limit = parameters.limit || 0;
 
-    return findAndReturnAsPromise(client, dbname, collection, JSON.parse(project), JSON.parse(filter), JSON.parse(sort), JSON.parse(limit));
+    return findAndReturnAsPromise(client, dbname, collection, JSON.parse(project), JSON.parse(filter), JSON.parse(sort), Number(limit));
 }
 
-export function genericAggregate(parameters) {
+export function genericAggregate(parameters: GenericAggregateParameters) {
 
     const client = parameters.mongodbclient,
         dbname = parameters.dbname,

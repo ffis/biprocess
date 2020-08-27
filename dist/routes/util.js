@@ -9,7 +9,6 @@ function genericQuery(parameters) {
     return util_1.queryAndReturnAsPromise(parameters.connection, query, parameters);
 }
 exports.genericQuery = genericQuery;
-// TODO: I don't know if it should check if the file lays inside the biprocess directory.
 function loadJSONFromFile(parameters) {
     var filename = parameters.filename.trim();
     var filepath = filename.indexOf('://') >= 0 ? filename : filename[0] === '/' ? filename : path_1.resolve(__dirname, "..", "..", filename);

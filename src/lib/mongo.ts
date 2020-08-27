@@ -1,6 +1,6 @@
 import { MongoClient } from "mongodb";
 
-export function findAndReturnAsPromise(client: MongoClient, db, collection, projection, filter, sort, limit) {
+export function findAndReturnAsPromise(client: MongoClient, db: string, collection: string, projection: object, filter: object, sort: object, limit: number) {
     return client.db(db).collection(collection).find(filter, {
         projection: projection,
         sort: sort,
@@ -8,6 +8,6 @@ export function findAndReturnAsPromise(client: MongoClient, db, collection, proj
     }).toArray();
 }
 
-export function aggregateAndReturnAsPromise(client: MongoClient, db, collection, pipeline) {
+export function aggregateAndReturnAsPromise(client: MongoClient, db: string, collection: string, pipeline: object[]) {
     return client.db(db).collection(collection).aggregate(pipeline).toArray();
 }

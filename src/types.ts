@@ -1,3 +1,7 @@
+import { Config } from "./config";
+import { MongoClient } from "mongodb";
+import { Sequelize } from "sequelize/types";
+
 export interface JobList {
     jobs: Jobs;
 }
@@ -60,4 +64,13 @@ export interface OnElement {
 export interface On {
     action: string;
     contains: string;
+}
+
+export type ConnectionType = Sequelize;
+
+export interface JobParameters {
+    config: Config;
+    connection: ConnectionType;
+    mongodbclient: MongoClient;
+    dbname: string;
 }

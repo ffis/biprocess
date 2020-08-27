@@ -1,4 +1,23 @@
 "use strict";
+var __createBinding = (this && this.__createBinding) || (Object.create ? (function(o, m, k, k2) {
+    if (k2 === undefined) k2 = k;
+    Object.defineProperty(o, k2, { enumerable: true, get: function() { return m[k]; } });
+}) : (function(o, m, k, k2) {
+    if (k2 === undefined) k2 = k;
+    o[k2] = m[k];
+}));
+var __setModuleDefault = (this && this.__setModuleDefault) || (Object.create ? (function(o, v) {
+    Object.defineProperty(o, "default", { enumerable: true, value: v });
+}) : function(o, v) {
+    o["default"] = v;
+});
+var __importStar = (this && this.__importStar) || function (mod) {
+    if (mod && mod.__esModule) return mod;
+    var result = {};
+    if (mod != null) for (var k in mod) if (k !== "default" && Object.hasOwnProperty.call(mod, k)) __createBinding(result, mod, k);
+    __setModuleDefault(result, mod);
+    return result;
+};
 Object.defineProperty(exports, "__esModule", { value: true });
 var os_1 = require("os");
 var redis_1 = require("redis");
@@ -6,12 +25,13 @@ var mongodb_1 = require("mongodb");
 var sequelize_1 = require("sequelize");
 var express = require("express");
 var utils_1 = require("./utils");
-var readline = require("readline");
+var readline = __importStar(require("readline"));
 var node_schedule_1 = require("node-schedule");
 var path_1 = require("path");
 var fs_1 = require("fs");
 var commander_1 = require("commander");
 var GlobToRegExp = require("glob-to-regexp");
+var config_1 = require("./config");
 var lib = require("require.all")("./routes");
 var packagedescription = JSON.parse(fs_1.readFileSync(path_1.resolve(__dirname, "..", "package.json"), "utf-8"));
 var program = new commander_1.Command();
@@ -24,18 +44,7 @@ if (!program.config) {
     console.error("You need to provide a config file. Use --help parameter for further information.");
     process.exit(1);
 }
-var config;
-try {
-    var where = path_1.isAbsolute(program.config) ? program.config : path_1.resolve(process.cwd(), program.config);
-    console.debug(where);
-    config = JSON.parse(fs_1.readFileSync(where, "utf-8"));
-}
-catch (err) {
-    console.error("You need to provide a valid config file. Use --help parameter for further information.");
-    console.debug(err.message);
-    process.exit(2);
-}
-var quiet = program.quiet;
+var config = config_1.getConfig(program.config);
 var redisclient = redis_1.createClient(config.redis);
 var redispublish = redis_1.createClient(config.redis);
 var redissubscribe;
@@ -88,7 +97,7 @@ function caller(functionname, obj, key, parameters) {
                     p[attr] = possiblevalues[value];
                     cp.push(JSON.parse(JSON.stringify(p)));
                 }
-            } while (callingparams.length);
+            } while (callingparams.length > 0);
             callingparams = cp;
         }
         var fns = callingparams.map(function (p) { return generator(functionname, obj, key, p); });
@@ -116,9 +125,6 @@ function runCommand(cmd) {
     })).then(function () { });
 }
 function connectSQL() {
-    if (config.db.options.logging) {
-        config.db.options.logging = console.log;
-    }
     connection = new sequelize_1.Sequelize(config.db.database, config.db.username, config.db.password, config.db.options);
     return connection.authenticate();
 }
@@ -149,27 +155,28 @@ function safeexit() {
 function setJobs(jbs) {
     cancelAllCrons();
     jobs = jbs.jobs.job;
-    crons = jobs.filter(function (job) {
-        return job.$.cron;
-    }).map(function (job) {
+    crons = jobs.reduce(function (p, job) {
+        if (!job.$.cron) {
+            return p;
+        }
         var cronmatching = job.$.cron;
         var methodname = job.$.method.split(".");
         var obj = lib[methodname[0]];
         var functionname = typeof lib[methodname[0]][methodname[1]] === "undefined" ? false : lib[methodname[0]][methodname[1]];
-        var parameters = null;
         if (!obj || !functionname) {
             console.error("Bad configuration!", methodname[0], methodname[1]);
-            return false;
+            return p;
         }
-        if (job.parameters) {
-            parameters = job.parameters[0].field.reduce(function (prev, parameter) {
-                prev[parameter.$.name] = parameter.value;
+        var parameters = (job.parameters) ?
+            job.parameters[0].field.reduce(function (prev, parameter) {
+                var idx = parameter.$.name.valueOf();
+                prev[idx] = parameter.value;
                 return prev;
-            }, {});
-        }
+            }, {}) : null;
         var fn = caller(functionname, obj, job.$.key, parameters);
-        return node_schedule_1.scheduleJob(cronmatching, fn);
-    }).filter(function (a) { return a; });
+        p.push(node_schedule_1.scheduleJob(cronmatching, fn));
+        return p;
+    }, []);
     return Promise.resolve();
 }
 var supportedCommands = {
@@ -183,7 +190,7 @@ var supportedCommands = {
         });
     },
     runall: function () {
-        return Promise.all(jobs.map(function (job) { return job.$.key; }).map(function (c) { return runCommand(c); }));
+        return Promise.all(jobs.map(function (job) { return job.$.key; }).map(function (c) { return runCommand(c); })).then(function () { });
     },
     help: function () {
         var comms = Object.keys(supportedCommands).map(function (s) {
@@ -194,13 +201,14 @@ var supportedCommands = {
         }).concat(comms);
         console.log(os_1.EOL, "The available options are:", os_1.EOL);
         console.log(options.join(os_1.EOL));
-        return Promise.resolve(true);
+        return Promise.resolve();
     },
     "?": function () {
         return supportedCommands.help();
     },
     quit: function () {
         safeexit();
+        return Promise.resolve();
     }
 };
 function completer(line) {
@@ -209,14 +217,13 @@ function completer(line) {
     var hits = options.filter(function (c) { return c.startsWith(line); });
     return [hits.length ? hits : options, line];
 }
-var rl = (quiet < 0) ? readline.createInterface({
+var rl = (program.quiet < 0) ? readline.createInterface({
     input: process.stdin,
     output: process.stdout,
     prompt: "COMMAND> ",
     completer: completer
 }) : null;
 var loadingSteps = [];
-loadingSteps.push(utils_1.loadXML(config));
 if (config.db && config.db.enabled) {
     loadingSteps.push(connectSQL());
 }
@@ -224,6 +231,7 @@ if (config.mongodb && config.mongodb.enabled) {
     loadingSteps.push(connectMongo());
 }
 Promise.all(loadingSteps)
+    .then(function () { return utils_1.loadXML(config); })
     .then(function (content) { return utils_1.xml2jobs(content[0]); })
     .then(function (jbs) { return setJobs(jbs); })
     .then(function () {
@@ -239,11 +247,11 @@ function runEnteredCommand(line) {
     if (line.trim() !== "") {
         var prefix = line.startsWith("/") ? line.substring(1).split(" ")[0] : line.split(" ")[0];
         if (typeof supportedCommands[prefix] === "function") {
-            return supportedCommands[prefix](line);
+            return supportedCommands[prefix]();
         }
         return runCommand(line.trim());
     }
-    return Promise.resolve(true);
+    return Promise.resolve();
 }
 if (rl) {
     rl.on("line", function (line) {
