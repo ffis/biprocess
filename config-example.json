@@ -1,5 +1,6 @@
 {
 	"db": {
+		"enabled": false,
 		"database": "",
 		"username": "",
 		"password": "",
@@ -31,5 +32,11 @@
 			"listen": ["create", "update", "delete"]
 		}
 	},
-	"debug": false
+	"debug": false,
+    "jobsDirectory": "jobs/",
+    "server" : {
+        "enabled": true,
+        "port": 7890,
+		"bind": "127.0.0.1"
+    }
 }

@@ -1,5 +1,5 @@
 
-import { readFile } from "fs/promises";
+import { promises as fs } from "fs";
 import { resolve } from "path";
 
 import { queryAndReturnAsPromise } from "../lib/util";
@@ -24,5 +24,5 @@ export function loadJSONFromFile(parameters: LoadJSONFromFileParameters): Promis
     const filename = parameters.filename.trim();
     const filepath = filename.indexOf('://') >= 0 ? filename : filename[0] === '/' ? filename : resolve(__dirname, "..", "..", filename);
 
-    return readFile(filepath, "utf-8").then((data) => JSON.parse(data));
+    return fs.readFile(filepath, "utf-8").then((data) => JSON.parse(data));
 }

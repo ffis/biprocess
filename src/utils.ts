@@ -1,58 +1,5 @@
 
-import { parseString } from "xml2js";
-import { promises } from "fs";
-import { resolve } from "path";
-import { promisify } from "util";
-import { JobList } from "./types";
-import { Config } from "./config";
-
-export function loadXML(config: Config): Promise<string | string[]> {
-
-    if (config.jobsDirectory){
-        return loadFromJobsDirectory(config);
-    }
-
-    return loadFromJobsFile();
-}
-
-function loadFromJobsDirectory(config: Config): Promise<string[]> {
-    return promises.readdir(resolve(__dirname, "..", config.jobsDirectory)).then((files) => {
-        return Promise.all(
-            files
-                .filter((file) => file.endsWith(".xml"))
-                .map((file) => {
-                    const filepath = resolve(__dirname, "..", config.jobsDirectory, file);
-                    return promises.readFile(filepath, "utf8");
-            })
-        );
-    }).catch((err) => {
-        console.error(resolve(__dirname, "..", config.jobsDirectory), "is not readable or doesn\"t exist.");
-        throw err;
-    });
-}
-
-function loadFromJobsFile(): Promise<string> {
-    return promises.readFile(resolve(__dirname, "..", "jobs.xml"), "utf8");
-}
-
-export function xml2jobs(xml: string | string[]): Promise<JobList> {
-    const parseXml = promisify(parseString);
-
-    if (typeof xml === "object" && Array.isArray(xml)) {
-        return Promise
-            .all(xml.map((data) => parseXml(data) as unknown as JobList) )
-            .then((datas: JobList[]) => datas.reduce((p: JobList, c: JobList) => {
-                p.jobs.job = p.jobs.job.concat(c.jobs.job);
-
-                return p;
-            }, {
-                jobs: {job: []}
-            })
-        );
-    }
-
-    return parseXml(xml).then((v) => v as JobList);
-}
+import { AfterFunction, DecorateFunction, MethodKind } from "./types";
 
 export function calculateKey(basekey: string, params: { [key: string]: string }): string {
 	let newkey = basekey;
@@ -63,4 +10,50 @@ export function calculateKey(basekey: string, params: { [key: string]: string })
 	}
 
 	return newkey;
+}
+
+export function generator(fn: Function, obj: object, basekey: string, params: { [key: string]: any }, decorate: DecorateFunction, after: AfterFunction) {
+	return function (): Promise<void> {
+		
+		decorate(params);
+
+		return Reflect.apply(fn, obj, [params]).then((value: any[]) => {
+			const newkey = calculateKey(basekey, params);
+			after(value, newkey);
+
+		}, (err: Error) => {
+			console.error(basekey, err);
+		});
+	};
+}
+
+
+export function caller(functionname: MethodKind, obj: object, key: string, parameters: { [key: string]: string[] } | null, decorate: DecorateFunction, after: AfterFunction) {
+	return function (): Promise<void> {
+		if (typeof parameters === "undefined") {
+			return generator(functionname, obj, key, {}, decorate, after)();
+		}
+
+		let callingparams = [{}];
+		for (const attr in parameters) {
+			const possiblevalues = parameters[attr];
+
+			const cp = [];
+			do {
+				const p: {[s: string]: string} = callingparams.shift()!;
+
+				for (const value in possiblevalues) {
+					p[attr] = possiblevalues[value];
+					cp.push(JSON.parse(JSON.stringify(p)));
+				}
+
+			} while (callingparams.length > 0);
+
+			callingparams = cp;
+		}
+
+		const fns = callingparams.map((p) => generator(functionname, obj, key, p, decorate, after));
+
+		return fns.reduce((p: Promise<void>, c) => p.then(() => c()), Promise.resolve());
+	};
 }

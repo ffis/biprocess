@@ -1,0 +1,18 @@
+<jobs>
+	<job key="/api/1/cacheable/entityB" method="util.genericQuery" cron="*/15 * * * *">
+		<description>Calculates the number of times something happens</description>
+		<parameters>
+			<field name="query">
+				<value><![CDATA[
+					select field, count(*)
+					from table1 inner join table2 on table1.id = table2.foreignkey
+					where field_filter_example < $parametername
+					group by field
+				]]></value>
+			</field>
+			<field name="parametername">
+				<value>24</value>
+			</field>
+		</parameters>
+	</job>
+</jobs>

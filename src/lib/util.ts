@@ -1,6 +1,7 @@
+import { QueryTypes } from "sequelize";
+
 import { GenericQueryParameters } from "../routes/util";
 import { ConnectionType } from "../types";
-import { QueryTypes } from "sequelize";
 
 export function queryAndReturnAsPromise(connection: ConnectionType, query: string, parameters: GenericQueryParameters) {
 	const pms = {

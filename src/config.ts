@@ -52,17 +52,16 @@ export interface Config {
     "debug": boolean;
     "jobsDirectory": string;
     "server": ServerConfig;
+    "quiet"?: boolean;
 }
 
 export function getConfig(configfile: string): Config {
     try {
         const where = isAbsolute(configfile) ? configfile : resolve(process.cwd(), configfile);
-        console.debug(where);
 
         return JSON.parse(readFileSync(where, "utf-8"));
     } catch (err) {
-        console.error("You need to provide a valid config file. Use --help parameter for further information.");
-        console.debug(err.message);
-        throw err;
+        const message = "You need to provide a valid config file. Use --help parameter for further information.";
+        throw new Error(message);
     }
 }

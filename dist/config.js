@@ -6,13 +6,11 @@ var path_1 = require("path");
 function getConfig(configfile) {
     try {
         var where = path_1.isAbsolute(configfile) ? configfile : path_1.resolve(process.cwd(), configfile);
-        console.debug(where);
         return JSON.parse(fs_1.readFileSync(where, "utf-8"));
     }
     catch (err) {
-        console.error("You need to provide a valid config file. Use --help parameter for further information.");
-        console.debug(err.message);
-        throw err;
+        var message = "You need to provide a valid config file. Use --help parameter for further information.";
+        throw new Error(message);
     }
 }
 exports.getConfig = getConfig;
