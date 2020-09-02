@@ -1,6 +1,6 @@
 import GlobToRegExp = require("glob-to-regexp");
 
-import { AfterFunction, DecorateFunction, Job, JobList, JobElement, Libraries, callerType, ScheduleJob, MethodKind, Library } from "../types";
+import { AfterFunction, DecorateFunction, Job, JobElement, Libraries, callerType, ScheduleJob, MethodKind, Library } from "../types";
 
 export class JobManager {
     private crons: Job[];
@@ -54,10 +54,10 @@ export class JobManager {
         return job.$.key;
     }
 
-    setJobs(jbs: JobList): Promise<void> {
+    setJobs(jbs: JobElement[]): Promise<void> {
         this.cancelAllCrons();
 
-        this.jobs_ = jbs.jobs.job;
+        this.jobs_ = jbs;
         this.crons = this.jobs.reduce((p: Job[], job: JobElement) => {
             const name = this.getJobsName(job);
 

@@ -5,22 +5,26 @@ var express_1 = require("express");
 var express = require("express");
 var assert_1 = require("assert");
 var HTTPInterface = (function () {
-    function HTTPInterface(config, runEnteredCommand, retrieveFromKey) {
+    function HTTPInterface(parameters) {
         var _this = this;
-        this.config = config;
-        this.runEnteredCommand = runEnteredCommand;
-        this.retrieveFromKey = retrieveFromKey;
-        this.app = null;
+        this.app_ = null;
         this.server = null;
-        assert_1.ok(this.config.port, "There must be a port configured");
-        assert_1.ok(this.config.bind, "There must be a bind address configured");
+        assert_1.ok(parameters.config, "Config is mandatory");
+        assert_1.ok(parameters.runEnteredCommand, "runEnteredCommand is mandatory");
+        assert_1.ok(parameters.retrieveFromKey, "retrieveFromKey is mandatory");
+        assert_1.ok(parameters.config.port, "There must be a port configured");
+        assert_1.ok(parameters.config.bind, "There must be a bind address configured");
+        this.parameters = Object.assign({}, parameters);
+        if (!this.parameters.logger) {
+            this.parameters.logger = console;
+        }
         this.router = express_1.Router();
         this.router.get("*", function (req, res) {
             if (req.originalUrl === "/") {
                 res.json(_this.options);
             }
             else {
-                _this.retrieveFromKey(req.originalUrl).then(function (val) {
+                _this.parameters.retrieveFromKey(req.originalUrl).then(function (val) {
                     if (val) {
                         res.type("application/json").send(val).end();
                     }
@@ -28,38 +32,45 @@ var HTTPInterface = (function () {
                         res.status(404).type("application/json").send("404").end();
                     }
                 }).catch(function (err) {
-                    res.status(500).json(err);
+                    _this.parameters.logger.error(err);
+                    res.status(500).end();
                 });
             }
         }).post("*", function (req, res) {
-            _this.runEnteredCommand(req.originalUrl).then(function () {
+            _this.parameters.runEnteredCommand(req.originalUrl).then(function () {
                 res.json(req.originalUrl);
             }).catch(function (err) {
-                res.status(500).json(err);
+                _this.parameters.logger.error(err);
+                res.status(500).end();
             });
         });
         this.options = [];
     }
+    Object.defineProperty(HTTPInterface.prototype, "app", {
+        get: function () {
+            return this.app_;
+        },
+        enumerable: false,
+        configurable: true
+    });
     HTTPInterface.prototype.setOptions = function (options) {
         this.options = options;
     };
     HTTPInterface.prototype.setJobs = function () { };
     HTTPInterface.prototype.run = function () {
         var _this = this;
-        if (this.app && this.server) {
+        if (this.app_ && this.server) {
             return Promise.resolve();
         }
         return new Promise(function (resolve, reject) {
-            _this.app = express();
-            _this.app.use(_this.router);
-            _this.server = _this.app.listen(_this.config.port, _this.config.bind, function () {
-                if (_this.server && _this.server.listening) {
-                    console.debug("Listenning on port", _this.config.port);
-                    resolve();
-                }
-                else {
-                    reject("Error trying to listen on port " + _this.config.port);
-                }
+            _this.app_ = express();
+            _this.app_.use(_this.router);
+            _this.server = _this.app_.listen(_this.parameters.config.port, _this.parameters.config.bind, function () {
+                _this.parameters.logger.log("Listenning on port", _this.parameters.config.port);
+                resolve();
+            });
+            _this.server.on("error", function () {
+                reject("Error trying to listen on port " + _this.parameters.config.port);
             });
         });
     };
@@ -67,7 +78,7 @@ var HTTPInterface = (function () {
         if (this.server) {
             var server_1 = this.server;
             this.server = null;
-            this.app = null;
+            this.app_ = null;
             return new Promise(function (resolve, reject) {
                 server_1.close(function (err) {
                     if (err) {

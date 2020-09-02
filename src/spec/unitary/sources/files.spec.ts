@@ -1,50 +1,49 @@
 
-import { loadFromJobsFile, loadFromJobsDirectory, loadXML, xml2jobs } from "../../../lib/sources/files";
+import { XMLJobSource } from "../../../lib/sources/files";
 import { resolve } from "path";
 
 const referenceDirectory = resolve(__dirname, "..", "..", "..", "..", "src", "spec", "testdata");
 
 describe("sources/files", () => {
     it("should be load from job.xml file", async () => {
-        const content = await loadFromJobsFile(referenceDirectory);
+        const source = new XMLJobSource({referenceDirectory});
+        const content = await source.loadJobs();
         expect(content).toBeDefined();
     });
 
     it("should fail to load from a wrong job.xml file", async () => {
-        await expectAsync(loadFromJobsFile(resolve(referenceDirectory, "random"))).toBeRejected();
+        const source = new XMLJobSource({referenceDirectory: resolve(referenceDirectory, "random")});
+        await expectAsync(source.loadJobs()).toBeRejected();
     });
 
     it("should be load from jobs directory", async () => {
-        const content = await loadFromJobsDirectory(referenceDirectory, "jobsdirectory");
+        const source = new XMLJobSource({referenceDirectory, jobsDirectory: "jobsdirectory"});
+        const content = await source.loadJobs();
         expect(content).toBeDefined();
     });
 
     it("should fail to load from a wrong jobs directory", async () => {
-        await expectAsync(loadFromJobsDirectory(referenceDirectory, "random")).toBeRejected();
+        const source = new XMLJobSource({referenceDirectory, jobsDirectory: "random"});
+        await expectAsync(source.loadJobs()).toBeRejected();
     });
 
     it("should be able to load using loadXML with no directory", async () => {
-        const content = await loadXML(referenceDirectory);
+        const source = new XMLJobSource({referenceDirectory});
+        const content = await source.loadJobs();
         expect(content).toBeDefined();
     });
 
     it("should be able to load using loadXML with directory", async () => {
-        const content = await loadXML(referenceDirectory, "jobsdirectory");
+        const source = new XMLJobSource({referenceDirectory, jobsDirectory: "jobsdirectory"});
+        const content = await source.loadJobs();
         expect(content).toBeDefined();
         expect(content.length).toEqual(2);
     });
 
-    it("should be able to load using loadXML with directory", async () => {
-        const content = await loadXML(referenceDirectory, "jobsdirectory");
-        const processed = await xml2jobs(content);
-        expect(processed).toBeDefined();
-        expect(processed.jobs.job.length).toEqual(2);
-    });
-
     it("should be able to load using loadXML with no directory", async () => {
-        const content = await loadXML(referenceDirectory);
-        const processed = await xml2jobs(content);
-        expect(processed).toBeDefined();
-        expect(processed.jobs.job.length).toEqual(3);
+        const source = new XMLJobSource({referenceDirectory});
+        const content = await source.loadJobs();
+        expect(content).toBeDefined();
+        expect(content.length).toEqual(3);
     });
 });

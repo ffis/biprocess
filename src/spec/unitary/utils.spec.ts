@@ -32,9 +32,7 @@ describe("utils", () => {
         const decorateFn = (params:  { [key: string]: any }) => {
             params.b = "2";
         };
-        const afterFn = () => {
-            throw new Error("this should not be runned");
-        };
+        const afterFn = () => {};
 
         await expectAsync(generator(obj.fn, obj, "/:a/:b", {a: "1"}, decorateFn, afterFn)()).toBeResolved();
     });

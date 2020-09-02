@@ -52,7 +52,7 @@ var JobManager = (function () {
     JobManager.prototype.setJobs = function (jbs) {
         var _this = this;
         this.cancelAllCrons();
-        this.jobs_ = jbs.jobs.job;
+        this.jobs_ = jbs;
         this.crons = this.jobs.reduce(function (p, job) {
             var name = _this.getJobsName(job);
             try {

@@ -11,13 +11,13 @@ import { resolve } from "path";
 import { readFileSync } from "fs";
 import { Command } from "commander";
 
-import { ConnectionType, JobList, Libraries } from "./types";
+import { ConnectionType, Libraries } from "./types";
 
 import { Config, getConfig } from "./config";
 import { connectSQL, connectMongo } from "./lib/connections";
 import { JobManager } from "./lib/jobs";
 import { runInterfaces } from "./interfaces";
-import { loadXML, xml2jobs } from "./lib/sources/files";
+import { XMLJobSource } from "./lib/sources/files";
 
 const libs: Libraries = require("require.all")("./routes");
 
@@ -84,8 +84,12 @@ function safeexit() {
 
 const supportedCommands: {[s: string]: () => Promise<void>} = {
 	reload: function () {
-		return loadXML(resolve(__dirname, ".."), config.jobsDirectory)
-			.then((content) => xml2jobs(content))
+		const source = new XMLJobSource({
+			referenceDirectory: resolve(__dirname, ".."),
+			jobsDirectory: config.jobsDirectory
+		});
+
+		return source.loadJobs()
 			.then((jbs) => jobManager.setJobs(jbs))
 			.then(() => Promise.all(interfaces.map((userInterface) => userInterface.setJobs(jobManager.jobs))))
 			.then(() => Promise.all(interfaces.map((userInterface) => userInterface.setOptions(getOptions()))))
@@ -156,11 +160,14 @@ export function getOptions(): string[] {
 	return jobManager.jobs.map((job) => job.$.key).concat(comms);
 }
 
+const source = new XMLJobSource({
+	referenceDirectory: resolve(__dirname, ".."),
+	jobsDirectory: config.jobsDirectory
+});
 
 Promise.all(loadingSteps)
-	.then(() => loadXML(resolve(__dirname, ".."), config.jobsDirectory))
-	.then((content) => xml2jobs(content[0]))
-	.then((jbs: JobList) => jobManager.setJobs(jbs))
+	.then(() => source.loadJobs())
+	.then((jbs) => jobManager.setJobs(jbs))
 	.then(() => Promise.all(interfaces.map((userInterface) => userInterface.setJobs(jobManager.jobs))))
 	.then(() => Promise.all(interfaces.map((userInterface) => userInterface.setOptions(getOptions()))))
 	.then(() => interfaces.reduce((p, userInterface) => p.then(() => userInterface.run()), Promise.resolve()))

@@ -80,9 +80,7 @@ describe("utils", function () {
                     decorateFn = function (params) {
                         params.b = "2";
                     };
-                    afterFn = function () {
-                        throw new Error("this should not be runned");
-                    };
+                    afterFn = function () { };
                     return [4, expectAsync(utils_1.generator(obj.fn, obj, "/:a/:b", { a: "1" }, decorateFn, afterFn)()).toBeResolved()];
                 case 1:
                     _a.sent();

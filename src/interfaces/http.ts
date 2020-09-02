@@ -6,19 +6,36 @@ import { Server } from "http";
 
 import { ServerConfig } from "../config";
 import { ok } from "assert";
+import { Logger } from "../types";
+
+export interface HTTPInterfaceOptions {
+    config: ServerConfig;
+    runEnteredCommand: (s: string) => Promise<void>;
+    retrieveFromKey: (s: string) => Promise<string>;
+    logger?: Logger;
+}
 
 export class HTTPInterface implements BiprocessInterface {
-    private app: Express | null;
+    private app_: Express | null;
     private router: Router;
     private server: Server | null;
     private options: string[];
+    private parameters: HTTPInterfaceOptions;
 
-    constructor(private config: ServerConfig, private runEnteredCommand: (s: string) => Promise<void>, private retrieveFromKey: (s: string) => Promise<string>) {
-        this.app = null;
+    constructor(parameters: HTTPInterfaceOptions) {
+        this.app_ = null;
         this.server = null;
 
-        ok(this.config.port, "There must be a port configured");
-        ok(this.config.bind, "There must be a bind address configured");
+        ok(parameters.config, "Config is mandatory");
+        ok(parameters.runEnteredCommand, "runEnteredCommand is mandatory");
+        ok(parameters.retrieveFromKey, "retrieveFromKey is mandatory");
+        ok(parameters.config.port, "There must be a port configured");
+        ok(parameters.config.bind, "There must be a bind address configured");
+
+        this.parameters = Object.assign({}, parameters);
+        if (!this.parameters.logger) {
+            this.parameters.logger = console;
+        }
 
         this.router = Router();
         this.router.get("*", (req: Request, res: Response) => {
@@ -26,24 +43,30 @@ export class HTTPInterface implements BiprocessInterface {
             if (req.originalUrl === "/") {
                 res.json(this.options);
             } else {
-                this.retrieveFromKey(req.originalUrl).then((val) => {
+                this.parameters.retrieveFromKey(req.originalUrl).then((val) => {
                     if (val) {
                         res.type("application/json").send(val).end();
                     } else {
                         res.status(404).type("application/json").send("404").end();
                     }
                 }).catch((err) => {
-                    res.status(500).json(err);
+                    this.parameters.logger!.error(err);
+                    res.status(500).end();
                 });
             }
         }).post("*", (req: Request, res: Response) => {
-            this.runEnteredCommand(req.originalUrl).then(() => {
+            this.parameters.runEnteredCommand(req.originalUrl).then(() => {
                 res.json(req.originalUrl);
             }).catch((err: Error) => {
-                res.status(500).json(err);
+                this.parameters.logger!.error(err);
+                res.status(500).end();
             });
         });
         this.options = [];
+    }
+
+    get app(): Express {
+        return this.app_!;
     }
 
     setOptions(options: string[]): void {
@@ -53,20 +76,19 @@ export class HTTPInterface implements BiprocessInterface {
     setJobs(): void {}
 
     run(): Promise<void> {
-        if (this.app && this.server) {
+        if (this.app_ && this.server) {
             return Promise.resolve();
         }
 
         return new Promise((resolve, reject) => {
-            this.app = express();
-            this.app.use(this.router);
-            this.server = this.app.listen(this.config.port, this.config.bind, () => {
-                if (this.server && this.server.listening) {
-                    console.debug("Listenning on port", this.config.port);
-                    resolve();
-                } else {
-                    reject("Error trying to listen on port " + this.config.port);
-                }
+            this.app_ = express();
+            this.app_.use(this.router);
+            this.server = this.app_.listen(this.parameters.config.port, this.parameters.config.bind, () => {
+                this.parameters.logger!.log("Listenning on port", this.parameters.config.port);
+                resolve();
+            });
+            this.server.on("error", () => {
+                reject("Error trying to listen on port " + this.parameters.config.port);
             });
         });
     }
@@ -75,7 +97,7 @@ export class HTTPInterface implements BiprocessInterface {
         if (this.server) {
             const server = this.server;
             this.server = null;
-            this.app = null;
+            this.app_ = null;
 
             return new Promise((resolve, reject) => {
                 server.close((err) => {

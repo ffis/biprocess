@@ -95,3 +95,9 @@ export type Job = nodeschedulejob;
 
 export type DecorateFunction = (params: {[key: string]: any}) => void;
 export type AfterFunction = (value: any[], newkey: string) => void;
+
+export interface Logger {
+    log: (... args: any) => void;
+    error: (... args: any) => void;
+}
+

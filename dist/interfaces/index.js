@@ -10,7 +10,7 @@ function runInterfaces(config, runEnteredCommand) {
         var retrieveFn = function (_s) {
             return Promise.resolve("");
         };
-        var httpinterface = new http_1.HTTPInterface(config.server, runEnteredCommand, retrieveFn);
+        var httpinterface = new http_1.HTTPInterface({ config: config.server, runEnteredCommand: runEnteredCommand, retrieveFromKey: retrieveFn });
         interfaces.push(httpinterface);
     }
     if (!config.quiet) {

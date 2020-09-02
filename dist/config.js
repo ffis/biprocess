@@ -5,7 +5,9 @@ var fs_1 = require("fs");
 var path_1 = require("path");
 function getConfig(configfile) {
     try {
-        var where = path_1.isAbsolute(configfile) ? configfile : path_1.resolve(process.cwd(), configfile);
+        var where = path_1.isAbsolute(configfile) ?
+            configfile :
+            path_1.resolve(process.cwd(), configfile);
         return JSON.parse(fs_1.readFileSync(where, "utf-8"));
     }
     catch (err) {

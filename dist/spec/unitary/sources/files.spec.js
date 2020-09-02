@@ -41,10 +41,12 @@ var path_1 = require("path");
 var referenceDirectory = path_1.resolve(__dirname, "..", "..", "..", "..", "src", "spec", "testdata");
 describe("sources/files", function () {
     it("should be load from job.xml file", function () { return __awaiter(void 0, void 0, void 0, function () {
-        var content;
+        var source, content;
         return __generator(this, function (_a) {
             switch (_a.label) {
-                case 0: return [4, files_1.loadFromJobsFile(referenceDirectory)];
+                case 0:
+                    source = new files_1.XMLJobSource({ referenceDirectory: referenceDirectory });
+                    return [4, source.loadJobs()];
                 case 1:
                     content = _a.sent();
                     expect(content).toBeDefined();
@@ -53,9 +55,12 @@ describe("sources/files", function () {
         });
     }); });
     it("should fail to load from a wrong job.xml file", function () { return __awaiter(void 0, void 0, void 0, function () {
+        var source;
         return __generator(this, function (_a) {
             switch (_a.label) {
-                case 0: return [4, expectAsync(files_1.loadFromJobsFile(path_1.resolve(referenceDirectory, "random"))).toBeRejected()];
+                case 0:
+                    source = new files_1.XMLJobSource({ referenceDirectory: path_1.resolve(referenceDirectory, "random") });
+                    return [4, expectAsync(source.loadJobs()).toBeRejected()];
                 case 1:
                     _a.sent();
                     return [2];
@@ -63,10 +68,12 @@ describe("sources/files", function () {
         });
     }); });
     it("should be load from jobs directory", function () { return __awaiter(void 0, void 0, void 0, function () {
-        var content;
+        var source, content;
         return __generator(this, function (_a) {
             switch (_a.label) {
-                case 0: return [4, files_1.loadFromJobsDirectory(referenceDirectory, "jobsdirectory")];
+                case 0:
+                    source = new files_1.XMLJobSource({ referenceDirectory: referenceDirectory, jobsDirectory: "jobsdirectory" });
+                    return [4, source.loadJobs()];
                 case 1:
                     content = _a.sent();
                     expect(content).toBeDefined();
@@ -75,9 +82,12 @@ describe("sources/files", function () {
         });
     }); });
     it("should fail to load from a wrong jobs directory", function () { return __awaiter(void 0, void 0, void 0, function () {
+        var source;
         return __generator(this, function (_a) {
             switch (_a.label) {
-                case 0: return [4, expectAsync(files_1.loadFromJobsDirectory(referenceDirectory, "random")).toBeRejected()];
+                case 0:
+                    source = new files_1.XMLJobSource({ referenceDirectory: referenceDirectory, jobsDirectory: "random" });
+                    return [4, expectAsync(source.loadJobs()).toBeRejected()];
                 case 1:
                     _a.sent();
                     return [2];
@@ -85,10 +95,12 @@ describe("sources/files", function () {
         });
     }); });
     it("should be able to load using loadXML with no directory", function () { return __awaiter(void 0, void 0, void 0, function () {
-        var content;
+        var source, content;
         return __generator(this, function (_a) {
             switch (_a.label) {
-                case 0: return [4, files_1.loadXML(referenceDirectory)];
+                case 0:
+                    source = new files_1.XMLJobSource({ referenceDirectory: referenceDirectory });
+                    return [4, source.loadJobs()];
                 case 1:
                     content = _a.sent();
                     expect(content).toBeDefined();
@@ -97,10 +109,12 @@ describe("sources/files", function () {
         });
     }); });
     it("should be able to load using loadXML with directory", function () { return __awaiter(void 0, void 0, void 0, function () {
-        var content;
+        var source, content;
         return __generator(this, function (_a) {
             switch (_a.label) {
-                case 0: return [4, files_1.loadXML(referenceDirectory, "jobsdirectory")];
+                case 0:
+                    source = new files_1.XMLJobSource({ referenceDirectory: referenceDirectory, jobsDirectory: "jobsdirectory" });
+                    return [4, source.loadJobs()];
                 case 1:
                     content = _a.sent();
                     expect(content).toBeDefined();
@@ -109,34 +123,17 @@ describe("sources/files", function () {
             }
         });
     }); });
-    it("should be able to load using loadXML with directory", function () { return __awaiter(void 0, void 0, void 0, function () {
-        var content, processed;
-        return __generator(this, function (_a) {
-            switch (_a.label) {
-                case 0: return [4, files_1.loadXML(referenceDirectory, "jobsdirectory")];
-                case 1:
-                    content = _a.sent();
-                    return [4, files_1.xml2jobs(content)];
-                case 2:
-                    processed = _a.sent();
-                    expect(processed).toBeDefined();
-                    expect(processed.jobs.job.length).toEqual(2);
-                    return [2];
-            }
-        });
-    }); });
     it("should be able to load using loadXML with no directory", function () { return __awaiter(void 0, void 0, void 0, function () {
-        var content, processed;
+        var source, content;
         return __generator(this, function (_a) {
             switch (_a.label) {
-                case 0: return [4, files_1.loadXML(referenceDirectory)];
+                case 0:
+                    source = new files_1.XMLJobSource({ referenceDirectory: referenceDirectory });
+                    return [4, source.loadJobs()];
                 case 1:
                     content = _a.sent();
-                    return [4, files_1.xml2jobs(content)];
-                case 2:
-                    processed = _a.sent();
-                    expect(processed).toBeDefined();
-                    expect(processed.jobs.job.length).toEqual(3);
+                    expect(content).toBeDefined();
+                    expect(content.length).toEqual(3);
                     return [2];
             }
         });

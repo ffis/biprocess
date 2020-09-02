@@ -18,7 +18,7 @@ export function runInterfaces(config: Config, runEnteredCommand: (s: string) => 
         const retrieveFn = (_s: string) => {
             return Promise.resolve("");
         }
-        const httpinterface = new HTTPInterface(config.server, runEnteredCommand, retrieveFn);
+        const httpinterface = new HTTPInterface({ config: config.server, runEnteredCommand, retrieveFromKey: retrieveFn });
         interfaces.push(httpinterface);
     }
 

@@ -60,8 +60,11 @@ function safeexit() {
 }
 var supportedCommands = {
     reload: function () {
-        return files_1.loadXML(path_1.resolve(__dirname, ".."), config.jobsDirectory)
-            .then(function (content) { return files_1.xml2jobs(content); })
+        var source = new files_1.XMLJobSource({
+            referenceDirectory: path_1.resolve(__dirname, ".."),
+            jobsDirectory: config.jobsDirectory
+        });
+        return source.loadJobs()
             .then(function (jbs) { return jobManager.setJobs(jbs); })
             .then(function () { return Promise.all(interfaces.map(function (userInterface) { return userInterface.setJobs(jobManager.jobs); })); })
             .then(function () { return Promise.all(interfaces.map(function (userInterface) { return userInterface.setOptions(getOptions()); })); })
@@ -119,9 +122,12 @@ function getOptions() {
     return jobManager.jobs.map(function (job) { return job.$.key; }).concat(comms);
 }
 exports.getOptions = getOptions;
+var source = new files_1.XMLJobSource({
+    referenceDirectory: path_1.resolve(__dirname, ".."),
+    jobsDirectory: config.jobsDirectory
+});
 Promise.all(loadingSteps)
-    .then(function () { return files_1.loadXML(path_1.resolve(__dirname, ".."), config.jobsDirectory); })
-    .then(function (content) { return files_1.xml2jobs(content[0]); })
+    .then(function () { return source.loadJobs(); })
     .then(function (jbs) { return jobManager.setJobs(jbs); })
     .then(function () { return Promise.all(interfaces.map(function (userInterface) { return userInterface.setJobs(jobManager.jobs); })); })
     .then(function () { return Promise.all(interfaces.map(function (userInterface) { return userInterface.setOptions(getOptions()); })); })

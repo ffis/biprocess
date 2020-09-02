@@ -57,9 +57,13 @@ export interface Config {
 
 export function getConfig(configfile: string): Config {
     try {
-        const where = isAbsolute(configfile) ? configfile : resolve(process.cwd(), configfile);
+
+        const where = isAbsolute(configfile) ?
+            configfile :
+            resolve(process.cwd(), configfile);
 
         return JSON.parse(readFileSync(where, "utf-8"));
+
     } catch (err) {
         const message = "You need to provide a valid config file. Use --help parameter for further information.";
         throw new Error(message);
