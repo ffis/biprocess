@@ -1,5 +1,3 @@
-import { EOL } from "os";
-
 import { scheduleJob } from "node-schedule";
 import { createClient, RedisClient } from "redis";
 
@@ -47,15 +45,6 @@ if (program.quiet) {
 const redisclient: RedisClient = createClient(config.redis);
 const redispublish: RedisClient = createClient(config.redis);
 
-const supportedCommandsDescription: {[s: string]: string} = {
-	"reload": "Reload jobs file",
-	"runall": "Runs all available commands",
-	"help": "Show the list of available commands",
-	"?": "Help alias",
-	"quit": "Exits"
-};
-
-
 let connection: ConnectionType;
 let mongodbclient: MongoClient;
 
@@ -101,22 +90,6 @@ const supportedCommands: {[s: string]: () => Promise<void>} = {
 	},
 	runall: function () {
 		return Promise.all(jobManager.jobs.map((job) => job.$.key).map((c) => jobManager.runCommand(c))).then(() => {});
-	},
-	help: function () {
-		const comms = Object.keys(supportedCommands).map(function (s) {
-			return s + (typeof supportedCommandsDescription[s] === "string" ? EOL + "\t" + supportedCommandsDescription[s] : "");
-		});
-		const options = jobManager.jobs.map(function (job) {
-			return job.$.key + (job.description ? EOL + "\t" + job.description : "");
-		}).concat(comms);
-
-		console.log(EOL, "The available options are:", EOL);
-		console.log(options.join(EOL));
-
-		return Promise.resolve();
-	},
-	"?": function () {
-		return supportedCommands.help();
 	},
 	quit: function () {
 		safeexit();
@@ -201,7 +174,6 @@ export function afterFunctionFn(value: any[], newkey: string): void {
 		console.log("Event OK:", newkey, "The length of the new stored value is:", stringfied.length);
 	}
 }
-
 
 process.on("uncaughtException", (s) => {
 	console.error("uncaughtException");

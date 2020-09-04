@@ -1,11 +1,10 @@
-import { HTTPInterface } from "../../../interfaces/http";
+import { HTTPInterface, HelpCommandOutput, HelpCommandOutputItem } from "../../../interfaces/http";
 import { ServerConfig } from "../../../config";
-
-// import {} from "supertest";
 
 import request = require("supertest");
 
 import getPort = require('get-port');
+import { Method, JobElement } from "../../../types";
 
 describe("HTTPInterface", () => {
     it("should fail work with non valid values", async () => {
@@ -26,7 +25,7 @@ describe("HTTPInterface", () => {
         });
 
         httpInterface.setOptions([]);
-        httpInterface.setJobs();
+        httpInterface.setJobs([]);
 
         return await expectAsync(httpInterface.run()).toBeRejected();
     });
@@ -43,6 +42,7 @@ describe("HTTPInterface", () => {
         let httpInterface: HTTPInterface;
 
         let expectedValue: string;
+        const apiDescription = "Api endpoint example";
 
         getPort().then((port) => {
             const config: ServerConfig = {
@@ -65,11 +65,20 @@ describe("HTTPInterface", () => {
 
                 return commandNotAvailable === _s ? Promise.resolve("") : Promise.resolve(storedValue);
             };
-
+            const jobs: JobElement[] = [
+                {
+                    $: {
+                        key: "/api",
+                        method: Method.UtilGenericQuery,
+                    },
+                    description: [apiDescription],
+                    parameters: []
+                }
+            ];
             httpInterface = new HTTPInterface({config, runEnteredCommand, retrieveFromKey});
 
             httpInterface.setOptions(options);
-            httpInterface.setJobs();
+            httpInterface.setJobs(jobs);
             return expectAsync(httpInterface.run()).toBeResolved();
         }).then(() => new Promise((resolve) => {
             request(httpInterface.app)
@@ -135,6 +144,22 @@ describe("HTTPInterface", () => {
                 });
             })
         ).then(() => {
+            expectedValue = "/help";
+
+            return request(httpInterface.app)
+                .post("/help")
+                .expect("Content-Type", /json/)
+                .expect(200)
+                .then((response) => {
+                    const commands: HelpCommandOutput = response.body;
+                    expect(commands).toBeDefined();
+                    expect(typeof commands).toBe("object");
+                    expect(Array.isArray(commands)).toBeTrue();
+                    const apiCommand = commands.find((c: HelpCommandOutputItem) => c.command === "/api");
+                    expect(apiCommand).toBeDefined();
+                    expect(apiCommand!.description).toBe(apiDescription);
+                });
+        }).then(() => {
             return expectAsync(httpInterface.run()).toBeResolved();
         }).then(() => {
             return expectAsync(httpInterface.close()).toBeResolved();

@@ -4,6 +4,17 @@ import { JobElement } from "../types";
 import { RedisChannelInterface } from "./redischannel";
 import { ReadLineInterface } from "./readline";
 
+export enum AvailableCommands {
+    help = "help"
+};
+
+export const supportedCommandsDescription: {[s: string]: string} = {
+	"reload": "Reload jobs file",
+	"runall": "Runs all available commands",
+	"help": "Show the list of available commands",
+	"quit": "Exits"
+};
+
 export interface BiprocessInterface {
     close: () => Promise<void>;
     run: () => Promise<void>;
@@ -23,7 +34,7 @@ export function runInterfaces(config: Config, runEnteredCommand: (s: string) => 
     }
 
     if (!config.quiet) {
-        const readLineInterface = new ReadLineInterface(runEnteredCommand);
+        const readLineInterface = new ReadLineInterface({ runEnteredCommand });
         interfaces.push(readLineInterface);
     }
 

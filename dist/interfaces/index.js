@@ -1,9 +1,20 @@
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.runInterfaces = void 0;
+exports.runInterfaces = exports.supportedCommandsDescription = exports.AvailableCommands = void 0;
 var http_1 = require("./http");
 var redischannel_1 = require("./redischannel");
 var readline_1 = require("./readline");
+var AvailableCommands;
+(function (AvailableCommands) {
+    AvailableCommands["help"] = "help";
+})(AvailableCommands = exports.AvailableCommands || (exports.AvailableCommands = {}));
+;
+exports.supportedCommandsDescription = {
+    "reload": "Reload jobs file",
+    "runall": "Runs all available commands",
+    "help": "Show the list of available commands",
+    "quit": "Exits"
+};
 function runInterfaces(config, runEnteredCommand) {
     var interfaces = [];
     if (config.server && config.server.enabled) {
@@ -14,7 +25,7 @@ function runInterfaces(config, runEnteredCommand) {
         interfaces.push(httpinterface);
     }
     if (!config.quiet) {
-        var readLineInterface = new readline_1.ReadLineInterface(runEnteredCommand);
+        var readLineInterface = new readline_1.ReadLineInterface({ runEnteredCommand: runEnteredCommand });
         interfaces.push(readLineInterface);
     }
     var channels2subscribe = config.redis.channels && Array.isArray(config.redis.channels.listen) ? config.redis.channels.listen : [];

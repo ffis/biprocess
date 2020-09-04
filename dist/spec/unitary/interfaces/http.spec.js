@@ -39,6 +39,7 @@ Object.defineProperty(exports, "__esModule", { value: true });
 var http_1 = require("../../../interfaces/http");
 var request = require("supertest");
 var getPort = require("get-port");
+var types_1 = require("../../../types");
 describe("HTTPInterface", function () {
     it("should fail work with non valid values", function () { return __awaiter(void 0, void 0, void 0, function () {
         var config, runEnteredCommand, retrieveFromKey, httpInterface;
@@ -59,7 +60,7 @@ describe("HTTPInterface", function () {
                         runEnteredCommand: runEnteredCommand
                     });
                     httpInterface.setOptions([]);
-                    httpInterface.setJobs();
+                    httpInterface.setJobs([]);
                     return [4, expectAsync(httpInterface.run()).toBeRejected()];
                 case 1: return [2, _a.sent()];
             }
@@ -75,6 +76,7 @@ describe("HTTPInterface", function () {
         var storedValue = "[{\"a\": 1}]";
         var httpInterface;
         var expectedValue;
+        var apiDescription = "Api endpoint example";
         getPort().then(function (port) {
             var config = {
                 bind: "localhost",
@@ -92,9 +94,19 @@ describe("HTTPInterface", function () {
                 }
                 return commandNotAvailable === _s ? Promise.resolve("") : Promise.resolve(storedValue);
             };
+            var jobs = [
+                {
+                    $: {
+                        key: "/api",
+                        method: types_1.Method.UtilGenericQuery,
+                    },
+                    description: [apiDescription],
+                    parameters: []
+                }
+            ];
             httpInterface = new http_1.HTTPInterface({ config: config, runEnteredCommand: runEnteredCommand, retrieveFromKey: retrieveFromKey });
             httpInterface.setOptions(options);
-            httpInterface.setJobs();
+            httpInterface.setJobs(jobs);
             return expectAsync(httpInterface.run()).toBeResolved();
         }).then(function () { return new Promise(function (resolve) {
             request(httpInterface.app)
@@ -152,6 +164,21 @@ describe("HTTPInterface", function () {
                 resolve();
             });
         }); }).then(function () {
+            expectedValue = "/help";
+            return request(httpInterface.app)
+                .post("/help")
+                .expect("Content-Type", /json/)
+                .expect(200)
+                .then(function (response) {
+                var commands = response.body;
+                expect(commands).toBeDefined();
+                expect(typeof commands).toBe("object");
+                expect(Array.isArray(commands)).toBeTrue();
+                var apiCommand = commands.find(function (c) { return c.command === "/api"; });
+                expect(apiCommand).toBeDefined();
+                expect(apiCommand.description).toBe(apiDescription);
+            });
+        }).then(function () {
             return expectAsync(httpInterface.run()).toBeResolved();
         }).then(function () {
             return expectAsync(httpInterface.close()).toBeResolved();

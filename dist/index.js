@@ -1,7 +1,6 @@
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.afterFunctionFn = exports.decorateParametersFn = exports.getOptions = void 0;
-var os_1 = require("os");
 var node_schedule_1 = require("node-schedule");
 var redis_1 = require("redis");
 var utils_1 = require("./utils");
@@ -31,13 +30,6 @@ if (program.quiet) {
 }
 var redisclient = redis_1.createClient(config.redis);
 var redispublish = redis_1.createClient(config.redis);
-var supportedCommandsDescription = {
-    "reload": "Reload jobs file",
-    "runall": "Runs all available commands",
-    "help": "Show the list of available commands",
-    "?": "Help alias",
-    "quit": "Exits"
-};
 var connection;
 var mongodbclient;
 var jobManager = new jobs_1.JobManager(libs, utils_1.caller, decorateParametersFn, afterFunctionFn, node_schedule_1.scheduleJob);
@@ -76,20 +68,6 @@ var supportedCommands = {
     },
     runall: function () {
         return Promise.all(jobManager.jobs.map(function (job) { return job.$.key; }).map(function (c) { return jobManager.runCommand(c); })).then(function () { });
-    },
-    help: function () {
-        var comms = Object.keys(supportedCommands).map(function (s) {
-            return s + (typeof supportedCommandsDescription[s] === "string" ? os_1.EOL + "\t" + supportedCommandsDescription[s] : "");
-        });
-        var options = jobManager.jobs.map(function (job) {
-            return job.$.key + (job.description ? os_1.EOL + "\t" + job.description : "");
-        }).concat(comms);
-        console.log(os_1.EOL, "The available options are:", os_1.EOL);
-        console.log(options.join(os_1.EOL));
-        return Promise.resolve();
-    },
-    "?": function () {
-        return supportedCommands.help();
     },
     quit: function () {
         safeexit();
