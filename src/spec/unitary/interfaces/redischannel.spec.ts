@@ -32,7 +32,7 @@ class FakeSubscribable implements Subscribable {
         });
     }
 
-    end() {
+    quit() {
         this.callbacks = {};
         this.listenningChannels = [];
     }

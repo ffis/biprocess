@@ -35,16 +35,6 @@ var JobManager = (function () {
             throw new Error("Something called " + methodname[1] + " is available on library " + methodname[0] + " but is not a function");
         }
     };
-    JobManager.prototype.getLibraryMethod = function (job) {
-        this.ensureLibraryAvailability(job);
-        var methodname = job.$.method.split(".");
-        var library = this.parameters.libs[methodname[0]];
-        var fn = this.parameters.libs[methodname[0]][methodname[1]];
-        return { library: library, fn: fn };
-    };
-    JobManager.prototype.getJobsName = function (job) {
-        return job.$.key;
-    };
     JobManager.prototype.setJobs = function (jbs) {
         var _this = this;
         this.cancelAllCrons();
@@ -103,6 +93,16 @@ var JobManager = (function () {
             }
             return _this.parameters.caller(fn, library, job.$.key, parameters, _this.parameters.decorate, _this.parameters.after)();
         })).then(function () { });
+    };
+    JobManager.prototype.getLibraryMethod = function (job) {
+        this.ensureLibraryAvailability(job);
+        var methodname = job.$.method.split(".");
+        var library = this.parameters.libs[methodname[0]];
+        var fn = this.parameters.libs[methodname[0]][methodname[1]];
+        return { library: library, fn: fn };
+    };
+    JobManager.prototype.getJobsName = function (job) {
+        return job.$.key;
     };
     return JobManager;
 }());

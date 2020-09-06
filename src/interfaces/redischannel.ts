@@ -8,7 +8,7 @@ export interface Subscribable {
     unsubscribe: () => void;
     subscribe: (name: string) => void;
     on: (event: string, callback: (channel: string, message: string) => void) => void;
-    end: () => void;
+    quit: () => void;
 }
 
 export interface RedisChannelInterfaceOptions {
@@ -30,7 +30,7 @@ export class RedisChannelInterface implements BiprocessInterface {
 		this.parameters = Object.assign({}, parameters);
     }
 
-    // eslint-disable-next-line @typescript-eslint/no-unused-vars
+    // eslint-disable-next-line @typescript-eslint/no-unused-vars, @typescript-eslint/no-empty-function
     setOptions(_options: string[]): void {}
 
     setJobs(jobs: JobElement[]): void {
@@ -75,7 +75,7 @@ export class RedisChannelInterface implements BiprocessInterface {
         const client = this.redissubscribe;
         this.redissubscribe = null;
         client.unsubscribe();
-        client.end();
+        client.quit();
 
         return Promise.resolve();
     }

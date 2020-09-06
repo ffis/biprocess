@@ -49,7 +49,7 @@ var RedisChannelInterface = (function () {
         var client = this.redissubscribe;
         this.redissubscribe = null;
         client.unsubscribe();
-        client.end();
+        client.quit();
         return Promise.resolve();
     };
     return RedisChannelInterface;

@@ -57,7 +57,7 @@ var FakeSubscribable = (function () {
             });
         });
     };
-    FakeSubscribable.prototype.end = function () {
+    FakeSubscribable.prototype.quit = function () {
         this.callbacks = {};
         this.listenningChannels = [];
     };

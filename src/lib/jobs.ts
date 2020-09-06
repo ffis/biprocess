@@ -50,20 +50,6 @@ export class JobManager {
         }
     }
 
-    getLibraryMethod(job: JobElement): {library: Library, fn: MethodKind} {
-        this.ensureLibraryAvailability(job);
-
-        const methodname = job.$.method.split(".");
-        const library = this.parameters.libs[methodname[0]];
-        const fn = this.parameters.libs[methodname[0]][methodname[1]];
-
-        return { library, fn };
-    }
-
-    getJobsName(job: JobElement): string {
-        return job.$.key;
-    }
-
     setJobs(jbs: JobElement[]): Promise<void> {
         this.cancelAllCrons();
 
@@ -141,5 +127,19 @@ export class JobManager {
             return this.parameters.caller(fn, library, job.$.key, parameters, this.parameters.decorate, this.parameters.after)();
         // eslint-disable-next-line @typescript-eslint/no-empty-function
         })).then(() => {});
-}
+    }
+
+    private getLibraryMethod(job: JobElement): {library: Library, fn: MethodKind} {
+        this.ensureLibraryAvailability(job);
+
+        const methodname = job.$.method.split(".");
+        const library = this.parameters.libs[methodname[0]];
+        const fn = this.parameters.libs[methodname[0]][methodname[1]];
+
+        return { library, fn };
+    }
+
+    private getJobsName(job: JobElement): string {
+        return job.$.key;
+    }
 }
