@@ -1,44 +1,63 @@
 
 import { BiprocessInterface } from ".";
-import { createClient, RedisClient } from "redis";
 import { RedisConfig } from "../config";
 import { ok } from "assert";
 import { JobElement } from "../types";
 
+export interface Subscribable {
+    unsubscribe: () => void;
+    subscribe: (name: string) => void;
+    on: (event: string, callback: (channel: string, message: string) => void) => void;
+    end: () => void;
+}
+
+export interface RedisChannelInterfaceOptions {
+    config: RedisConfig;
+    runEnteredCommand: (s: string) => Promise<void>;
+    createClient: (config: RedisConfig) => Subscribable;
+}
 
 export class RedisChannelInterface implements BiprocessInterface {
     private jobs: JobElement[];
-    private redissubscribe: RedisClient | null;
+    private redissubscribe: Subscribable | null;
+    private parameters: RedisChannelInterfaceOptions;
 
-    constructor(private config: RedisConfig, private runEnteredCommand: (s: string) => Promise<void>) {
-        ok(config.channels);
-        ok( Array.isArray(config.channels.listen));
+    constructor(parameters: RedisChannelInterfaceOptions) {
+        ok(parameters.config.channels);
+        ok(Array.isArray(parameters.config.channels.listen));
         this.redissubscribe = null;
         this.jobs = [];
+		this.parameters = Object.assign({}, parameters);
     }
 
-    setOptions(): void {}
+    // eslint-disable-next-line @typescript-eslint/no-unused-vars
+    setOptions(_options: string[]): void {}
 
-    setJobs(jobs: JobElement[]) {
+    setJobs(jobs: JobElement[]): void {
+        ok(Array.isArray(jobs));
         this.jobs = jobs;
     }
 
     run(): Promise<void> {
+        if (this.redissubscribe) {
+            return Promise.resolve();
+        }
 
-        this.redissubscribe = createClient(this.config);
-        this.config.channels.listen.forEach((channel) => {
+        this.redissubscribe = this.parameters.createClient(this.parameters.config);
+        this.parameters.config.channels.listen.forEach((channel) => {
+            // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
             this.redissubscribe!.subscribe(channel);
         });
 
         this.redissubscribe.on("message", (channel: string, message: string) => {
-            if (this.jobs && Array.isArray(this.jobs)) {
-                const triggeredJobs = this.jobs.filter((j) => j.triggers && j.triggers.filter((trigger) => trigger.on.filter((event) => event.$.action === channel && message.includes(event.$.contains)).length > 0).length > 0);
+            const triggeredJobs = this.jobs.filter((j) =>
+                j.triggers && j.triggers.filter((trigger) =>
+                    trigger.on.filter((event) =>
+                        event.$.action === channel && message.includes(event.$.contains)).length > 0).length > 0);
 
-                
-                triggeredJobs.forEach((job) => {
-                    this.runEnteredCommand(job.$.key);
-                });
-            }
+            triggeredJobs.forEach((job) => {
+                this.parameters.runEnteredCommand(job.$.key);
+            });
         });
 
         return Promise.resolve();
@@ -51,6 +70,7 @@ export class RedisChannelInterface implements BiprocessInterface {
 
         const client = this.redissubscribe;
         this.redissubscribe = null;
+        client.unsubscribe();
         client.end();
 
         return Promise.resolve();

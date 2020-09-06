@@ -1,3 +1,5 @@
+import { createClient } from "redis";
+
 import { Config } from "../config";
 import { HTTPInterface } from "./http";
 import { JobElement } from "../types";
@@ -6,7 +8,7 @@ import { ReadLineInterface } from "./readline";
 
 export enum AvailableCommands {
     help = "help"
-};
+}
 
 export const supportedCommandsDescription: {[s: string]: string} = {
 	"reload": "Reload jobs file",
@@ -40,7 +42,7 @@ export function runInterfaces(config: Config, runEnteredCommand: (s: string) => 
 
     const channels2subscribe: string[] = config.redis.channels && Array.isArray(config.redis.channels.listen) ? config.redis.channels.listen : [];
     if (channels2subscribe.length > 0) {
-        const redisChannelInterface = new RedisChannelInterface(config.redis, runEnteredCommand);
+        const redisChannelInterface = new RedisChannelInterface({ config: config.redis, createClient, runEnteredCommand });
 
         interfaces.push(redisChannelInterface);
     }

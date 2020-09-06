@@ -13,6 +13,6 @@ describe("CryptLib", () => {
         const password = "this is a password";
         const cryptedPassword = await cryptPassword(password);
 
-        expectAsync(comparePassword(password, cryptedPassword)).toBeResolvedTo(true);
+        return expectAsync(comparePassword(password, cryptedPassword)).toBeResolvedTo(true);
     })
 });

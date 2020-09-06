@@ -3,14 +3,10 @@ Object.defineProperty(exports, "__esModule", { value: true });
 exports.JobManager = void 0;
 var GlobToRegExp = require("glob-to-regexp");
 var JobManager = (function () {
-    function JobManager(libs, caller, decorate, after, scheduleJob) {
-        this.libs = libs;
-        this.caller = caller;
-        this.decorate = decorate;
-        this.after = after;
-        this.scheduleJob = scheduleJob;
+    function JobManager(parameters) {
         this.crons = [];
         this.jobs_ = [];
+        this.parameters = Object.assign({}, parameters);
     }
     Object.defineProperty(JobManager.prototype, "jobs", {
         get: function () {
@@ -27,23 +23,23 @@ var JobManager = (function () {
     };
     JobManager.prototype.ensureLibraryAvailability = function (job) {
         var methodname = job.$.method.split(".");
-        var obj = this.libs[methodname[0]];
+        var obj = this.parameters.libs[methodname[0]];
         if (!obj) {
             throw new Error("No library called " + methodname[0] + " is available");
         }
-        var functionname = typeof this.libs[methodname[0]][methodname[1]] === "undefined" ? null : this.libs[methodname[0]][methodname[1]];
+        var functionname = typeof this.parameters.libs[methodname[0]][methodname[1]] === "undefined" ? null : this.parameters.libs[methodname[0]][methodname[1]];
         if (!obj || !functionname) {
             throw new Error("No function called " + methodname[1] + " is available on library " + methodname[0]);
         }
-        if (typeof this.libs[methodname[0]][methodname[1]] !== "function") {
+        if (typeof this.parameters.libs[methodname[0]][methodname[1]] !== "function") {
             throw new Error("Something called " + methodname[1] + " is available on library " + methodname[0] + " but is not a function");
         }
     };
     JobManager.prototype.getLibraryMethod = function (job) {
         this.ensureLibraryAvailability(job);
         var methodname = job.$.method.split(".");
-        var library = this.libs[methodname[0]];
-        var fn = this.libs[methodname[0]][methodname[1]];
+        var library = this.parameters.libs[methodname[0]];
+        var fn = this.parameters.libs[methodname[0]][methodname[1]];
         return { library: library, fn: fn };
     };
     JobManager.prototype.getJobsName = function (job) {
@@ -73,8 +69,8 @@ var JobManager = (function () {
                     prev[idx] = parameter.value;
                     return prev;
                 }, {}) : null;
-            var scheduledfn = _this.caller(fn, library, job.$.key, parameters, _this.decorate, _this.after);
-            p.push(_this.scheduleJob(name, cronmatching, scheduledfn));
+            var scheduledfn = _this.parameters.caller(fn, library, job.$.key, parameters, _this.parameters.decorate, _this.parameters.after);
+            p.push(_this.parameters.scheduleJob(name, cronmatching, scheduledfn));
             return p;
         }, []);
         return Promise.resolve();
@@ -105,7 +101,7 @@ var JobManager = (function () {
                     return prev;
                 }, {});
             }
-            return _this.caller(fn, library, job.$.key, parameters, _this.decorate, _this.after)();
+            return _this.parameters.caller(fn, library, job.$.key, parameters, _this.parameters.decorate, _this.parameters.after)();
         })).then(function () { });
     };
     return JobManager;

@@ -63,7 +63,8 @@ var HTTPInterface = (function () {
                         res.status(404).type("application/json").send("404").end();
                     }
                 }).catch(function (err) {
-                    _this.parameters.logger.error(err);
+                    var _a;
+                    (_a = _this.parameters.logger) === null || _a === void 0 ? void 0 : _a.error(err);
                     res.status(500).end();
                 });
             }
@@ -71,7 +72,8 @@ var HTTPInterface = (function () {
             _this.commands.run(req.originalUrl, _this.jobs, _this.parameters.runEnteredCommand)
                 .then(function (value) { res.json(value); })
                 .catch(function (err) {
-                _this.parameters.logger.error(err);
+                var _a;
+                (_a = _this.parameters.logger) === null || _a === void 0 ? void 0 : _a.error(err);
                 res.status(500).end();
             });
         });
@@ -99,7 +101,8 @@ var HTTPInterface = (function () {
             _this.app_ = express();
             _this.app_.use(_this.router);
             _this.server = _this.app_.listen(_this.parameters.config.port, _this.parameters.config.bind, function () {
-                _this.parameters.logger.log("Listenning on port", _this.parameters.config.port);
+                var _a;
+                (_a = _this.parameters.logger) === null || _a === void 0 ? void 0 : _a.log("Listenning on port", _this.parameters.config.port);
                 resolve();
             });
             _this.server.on("error", function () {

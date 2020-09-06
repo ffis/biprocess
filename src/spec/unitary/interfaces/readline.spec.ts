@@ -26,7 +26,7 @@ describe("Readline Interface", () => {
         const failingCommand = "/failing";
 
         // const storedValue = "[{\"a\": 1}]";
-        let rlInterface: ReadLineInterface;
+        
 
         let expectedValue: string;
         const apiDescription = "Api endpoint example";
@@ -64,7 +64,7 @@ describe("Readline Interface", () => {
 
         const input = new PassThrough();
 
-        rlInterface = new ReadLineInterface({
+        const rlInterface: ReadLineInterface = new ReadLineInterface({
             input,
             runEnteredCommand
         });

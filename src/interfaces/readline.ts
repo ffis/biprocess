@@ -111,7 +111,7 @@ export class ReadLineInterface implements BiprocessInterface {
 		return Promise.resolve();
 	}
 
-	public completer(line: string) {
+	public completer(line: string): [string[], string] {
 		const hits = this.options.filter((c) => c.startsWith(line));
 
 		return [line.length ? hits : this.options, line];

@@ -2,13 +2,23 @@ import GlobToRegExp = require("glob-to-regexp");
 
 import { AfterFunction, DecorateFunction, Job, JobElement, Libraries, callerType, ScheduleJob, MethodKind, Library } from "../types";
 
+export interface JobManagerOptions {
+    after: AfterFunction;
+    caller: callerType;
+    decorate: DecorateFunction;
+    libs: Libraries;
+    scheduleJob: ScheduleJob;
+}
+
 export class JobManager {
     private crons: Job[];
     private jobs_: JobElement[];
+    private parameters: JobManagerOptions;
 
-    constructor(private libs: Libraries, private caller: callerType, private decorate: DecorateFunction, private after: AfterFunction, private scheduleJob: ScheduleJob) {
+    constructor(parameters: JobManagerOptions) {
         this.crons = [];
         this.jobs_ = [];
+		this.parameters = Object.assign({}, parameters);
     }
 
     get jobs(): JobElement[] {
@@ -24,18 +34,18 @@ export class JobManager {
 
     ensureLibraryAvailability(job: JobElement): void {
         const methodname = job.$.method.split(".");
-        const obj = this.libs[methodname[0]];
+        const obj = this.parameters.libs[methodname[0]];
         if (!obj) {
             throw new Error("No library called " + methodname[0] + " is available");
         }
 
-        const functionname = typeof this.libs[methodname[0]][methodname[1]] === "undefined" ? null : this.libs[methodname[0]][methodname[1]];
+        const functionname = typeof this.parameters.libs[methodname[0]][methodname[1]] === "undefined" ? null : this.parameters.libs[methodname[0]][methodname[1]];
 
         if (!obj || !functionname) {
             throw new Error("No function called " + methodname[1] + " is available on library " + methodname[0]);
         }
 
-        if (typeof this.libs[methodname[0]][methodname[1]] !== "function") {
+        if (typeof this.parameters.libs[methodname[0]][methodname[1]] !== "function") {
             throw new Error("Something called " + methodname[1] + " is available on library " + methodname[0] + " but is not a function");
         }
     }
@@ -44,8 +54,8 @@ export class JobManager {
         this.ensureLibraryAvailability(job);
 
         const methodname = job.$.method.split(".");
-        const library = this.libs[methodname[0]];
-        const fn = this.libs[methodname[0]][methodname[1]];
+        const library = this.parameters.libs[methodname[0]];
+        const fn = this.parameters.libs[methodname[0]][methodname[1]];
 
         return { library, fn };
     }
@@ -84,9 +94,9 @@ export class JobManager {
                     return prev;
                 }, {}) : null;
 
-            const scheduledfn = this.caller(fn, library, job.$.key, parameters, this.decorate, this.after);
+            const scheduledfn = this.parameters.caller(fn, library, job.$.key, parameters, this.parameters.decorate, this.parameters.after);
 
-            p.push(this.scheduleJob(name, cronmatching, scheduledfn));
+            p.push(this.parameters.scheduleJob(name, cronmatching, scheduledfn));
 
             return p;
         }, [] as Job[]);
@@ -128,7 +138,8 @@ export class JobManager {
                 }, {});
             }
 
-            return this.caller(fn, library, job.$.key, parameters, this.decorate, this.after)();
+            return this.parameters.caller(fn, library, job.$.key, parameters, this.parameters.decorate, this.parameters.after)();
+        // eslint-disable-next-line @typescript-eslint/no-empty-function
         })).then(() => {});
 }
 }

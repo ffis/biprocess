@@ -32,7 +32,13 @@ var redisclient = redis_1.createClient(config.redis);
 var redispublish = redis_1.createClient(config.redis);
 var connection;
 var mongodbclient;
-var jobManager = new jobs_1.JobManager(libs, utils_1.caller, decorateParametersFn, afterFunctionFn, node_schedule_1.scheduleJob);
+var jobManager = new jobs_1.JobManager({
+    after: afterFunctionFn,
+    decorate: decorateParametersFn,
+    caller: utils_1.caller,
+    libs: libs,
+    scheduleJob: node_schedule_1.scheduleJob
+});
 var interfaces = interfaces_1.runInterfaces(config, runEnteredCommand);
 function safeexit() {
     jobManager.cancelAllCrons();

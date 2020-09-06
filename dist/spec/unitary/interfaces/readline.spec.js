@@ -54,7 +54,7 @@ describe("Readline Interface", function () {
         });
     }); });
     it("should work with valid values", function () { return __awaiter(void 0, void 0, void 0, function () {
-        var options, commandAvailable, failingCommand, rlInterface, expectedValue, apiDescription, runEnteredCommand, jobs, input;
+        var options, commandAvailable, failingCommand, expectedValue, apiDescription, runEnteredCommand, jobs, input, rlInterface;
         return __generator(this, function (_a) {
             options = [
                 "/api/1", "/api/2", "/api/3"

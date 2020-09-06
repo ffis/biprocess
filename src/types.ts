@@ -77,7 +77,7 @@ export interface JobParameters {
     dbname: string;
 }
 
-export type MethodKind = () => Promise<any[]>;
+export type MethodKind = () => Promise<unknown[]>;
 
 export interface Library {
     [method: string]: MethodKind;
@@ -87,14 +87,14 @@ export interface Libraries {
     [s: string]: Library;
 }
 
-export type callerType = (functionname: MethodKind, obj: any, key: string, parameters: { [key: string]: string[] } | null, decorate: DecorateFunction, after: AfterFunction) => () => void;
+export type callerType = (functionname: MethodKind, obj: Record<string, unknown>, key: string, parameters: { [key: string]: string[] } | null, decorate: DecorateFunction, after: AfterFunction) => () => void;
 
 export type ScheduleJob = (name: string, rule: string, callback: () => void) => Job;
 
 export type Job = nodeschedulejob;
 
-export type DecorateFunction = (params: {[key: string]: any}) => void;
-export type AfterFunction = (value: any[], newkey: string) => void;
+export type DecorateFunction = (params: {[key: string]: unknown}) => void;
+export type AfterFunction = (value: unknown[], newkey: string) => void;
 
 export interface Logger {
     log: (... args: any) => void;

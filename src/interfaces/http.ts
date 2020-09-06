@@ -18,7 +18,7 @@ export type HelpCommandOutput = HelpCommandOutputItem[];
 export class Commands {
 
 	public help(jobs: JobElement[]): Promise<HelpCommandOutput> {
-		const comms: HelpCommandOutput = Object.keys(supportedCommandsDescription).map(function (s) {
+		const comms: HelpCommandOutput = Object.keys(supportedCommandsDescription).map((s) => {
 			return {command: "/" + s, description: supportedCommandsDescription[s]};
 		});
 		const options: HelpCommandOutput = jobs.map((job): HelpCommandOutputItem => {
@@ -32,7 +32,7 @@ export class Commands {
 		return str.startsWith("/") && Object.keys(AvailableCommands).indexOf(str.replace("/", "")) >= 0;
 	}
 
-	run(command: string, jobs: JobElement[], runEnteredCommand: (s: string) => Promise<void>): Promise<any> {
+	run(command: string, jobs: JobElement[], runEnteredCommand: (s: string) => Promise<void>): Promise<HelpCommandOutput|string> {
 
 		if (this.isCommand(command)) {
 			switch (command) {
@@ -91,7 +91,7 @@ export class HTTPInterface implements BiprocessInterface {
 						res.status(404).type("application/json").send("404").end();
 					}
 				}).catch((err) => {
-					this.parameters.logger!.error(err);
+					this.parameters.logger?.error(err);
 					res.status(500).end();
 				});
 			}
@@ -99,7 +99,7 @@ export class HTTPInterface implements BiprocessInterface {
 			this.commands.run(req.originalUrl, this.jobs, this.parameters.runEnteredCommand)
 				.then((value) => { res.json(value); })
 				.catch((err: Error) => {
-					this.parameters.logger!.error(err);
+					this.parameters.logger?.error(err);
 					res.status(500).end();
 				});
 		});
@@ -127,7 +127,7 @@ export class HTTPInterface implements BiprocessInterface {
 			this.app_ = express();
 			this.app_.use(this.router);
 			this.server = this.app_.listen(this.parameters.config.port, this.parameters.config.bind, () => {
-				this.parameters.logger!.log("Listenning on port", this.parameters.config.port);
+				this.parameters.logger?.log("Listenning on port", this.parameters.config.port);
 				resolve();
 			});
 			this.server.on("error", () => {

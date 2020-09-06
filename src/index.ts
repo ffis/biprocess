@@ -48,7 +48,13 @@ const redispublish: RedisClient = createClient(config.redis);
 let connection: ConnectionType;
 let mongodbclient: MongoClient;
 
-const jobManager = new JobManager(libs, caller, decorateParametersFn, afterFunctionFn, scheduleJob);
+const jobManager = new JobManager({
+	after: afterFunctionFn,
+	decorate: decorateParametersFn,
+	caller,
+	libs,
+	scheduleJob
+});
 
 const interfaces = runInterfaces(config, runEnteredCommand);
 

@@ -31,7 +31,7 @@ export interface MongoDBConfig {
 
 export interface RedisConfig {
     "host": string;
-    "port": number;
+    "port"?: number;
     "password"?: string;
     "no_ready_check": boolean;
     "channels": {

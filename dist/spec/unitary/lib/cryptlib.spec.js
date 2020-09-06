@@ -53,8 +53,7 @@ describe("CryptLib", function () {
                     return [4, cryptlib_1.cryptPassword(password)];
                 case 1:
                     cryptedPassword = _a.sent();
-                    expectAsync(cryptlib_1.comparePassword(password, cryptedPassword)).toBeResolvedTo(true);
-                    return [2];
+                    return [2, expectAsync(cryptlib_1.comparePassword(password, cryptedPassword)).toBeResolvedTo(true)];
             }
         });
     }); });
