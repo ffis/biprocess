@@ -28,7 +28,7 @@ var Commands = (function () {
     }
     Commands.prototype.help = function (jobs, output) {
         var comms = Object.keys(_1.supportedCommandsDescription).map(function (s) {
-            return s + (typeof _1.supportedCommandsDescription[s] === "string" ? os_1.EOL + "\t" + _1.supportedCommandsDescription[s] : "");
+            return s + os_1.EOL + "\t" + _1.supportedCommandsDescription[s];
         });
         var options = jobs.map(function (job) {
             return job.$.key + (job.description ? os_1.EOL + "\t" + job.description : "");
@@ -105,8 +105,9 @@ var ReadLineInterface = (function () {
         return Promise.resolve();
     };
     ReadLineInterface.prototype.completer = function (line) {
-        var hits = this.options.filter(function (c) { return c.startsWith(line); });
-        return [line.length ? hits : this.options, line];
+        return [line.length > 0 ?
+                this.options.filter(function (c) { return c.startsWith(line); }) :
+                this.options, line];
     };
     return ReadLineInterface;
 }());

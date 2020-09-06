@@ -63,14 +63,17 @@ describe("Readline Interface", () => {
         ];
 
         const input = new PassThrough();
+        const output = process.stdout;
 
         const rlInterface: ReadLineInterface = new ReadLineInterface({
             input,
+            output,
             runEnteredCommand
         });
 
         rlInterface.setOptions(options);
         rlInterface.setJobs(jobs);
+        expect(rlInterface.completer("")).toEqual([options, ""]);
         expect(rlInterface.completer("/")).toEqual([options, "/"]);
         expect(rlInterface.completer(options[0])).toEqual([[options[0]], options[0]]);
 

@@ -1,6 +1,6 @@
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.runInterfaces = exports.supportedCommandsDescription = exports.AvailableCommands = void 0;
+exports.getInterfaces = exports.supportedCommandsDescription = exports.AvailableCommands = void 0;
 var redis_1 = require("redis");
 var http_1 = require("./http");
 var redischannel_1 = require("./redischannel");
@@ -15,12 +15,10 @@ exports.supportedCommandsDescription = {
     "help": "Show the list of available commands",
     "quit": "Exits"
 };
-function runInterfaces(config, runEnteredCommand) {
+function getInterfaces(config, runEnteredCommand) {
     var interfaces = [];
     if (config.server && config.server.enabled) {
-        var retrieveFn = function (_s) {
-            return Promise.resolve("");
-        };
+        var retrieveFn = function (_s) { return Promise.resolve(""); };
         var httpinterface = new http_1.HTTPInterface({ config: config.server, runEnteredCommand: runEnteredCommand, retrieveFromKey: retrieveFn });
         interfaces.push(httpinterface);
     }
@@ -35,5 +33,5 @@ function runInterfaces(config, runEnteredCommand) {
     }
     return interfaces;
 }
-exports.runInterfaces = runInterfaces;
+exports.getInterfaces = getInterfaces;
 //# sourceMappingURL=index.js.map

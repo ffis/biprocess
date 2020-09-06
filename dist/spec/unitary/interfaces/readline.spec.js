@@ -54,7 +54,7 @@ describe("Readline Interface", function () {
         });
     }); });
     it("should work with valid values", function () { return __awaiter(void 0, void 0, void 0, function () {
-        var options, commandAvailable, failingCommand, expectedValue, apiDescription, runEnteredCommand, jobs, input, rlInterface;
+        var options, commandAvailable, failingCommand, expectedValue, apiDescription, runEnteredCommand, jobs, input, output, rlInterface;
         return __generator(this, function (_a) {
             options = [
                 "/api/1", "/api/2", "/api/3"
@@ -93,12 +93,15 @@ describe("Readline Interface", function () {
                 }
             ];
             input = new stream_1.PassThrough();
+            output = process.stdout;
             rlInterface = new readline_1.ReadLineInterface({
                 input: input,
+                output: output,
                 runEnteredCommand: runEnteredCommand
             });
             rlInterface.setOptions(options);
             rlInterface.setJobs(jobs);
+            expect(rlInterface.completer("")).toEqual([options, ""]);
             expect(rlInterface.completer("/")).toEqual([options, "/"]);
             expect(rlInterface.completer(options[0])).toEqual([[options[0]], options[0]]);
             return [2, expectAsync(rlInterface.run()).toBeResolved().then(function () {

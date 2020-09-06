@@ -56,7 +56,11 @@ export class RedisChannelInterface implements BiprocessInterface {
                         event.$.action === channel && message.includes(event.$.contains)).length > 0).length > 0);
 
             triggeredJobs.forEach((job) => {
-                this.parameters.runEnteredCommand(job.$.key);
+                this.parameters
+                    .runEnteredCommand(job.$.key)
+                    .catch((err) => {
+                        console.error(err);
+                    });
             });
         });
 

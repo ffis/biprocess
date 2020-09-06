@@ -14,7 +14,7 @@ import { ConnectionType, Libraries } from "./types";
 import { Config, getConfig } from "./config";
 import { connectSQL, connectMongo } from "./lib/connections";
 import { JobManager } from "./lib/jobs";
-import { runInterfaces } from "./interfaces";
+import { getInterfaces } from "./interfaces";
 import { XMLJobSource } from "./lib/sources/files";
 
 const libs: Libraries = require("require.all")("./routes");
@@ -56,7 +56,7 @@ const jobManager = new JobManager({
 	scheduleJob
 });
 
-const interfaces = runInterfaces(config, runEnteredCommand);
+const interfaces = getInterfaces(config, runEnteredCommand);
 
 function safeexit() {
 	jobManager.cancelAllCrons();

@@ -15,7 +15,7 @@ export interface GenericAggregateParameters extends JobParameters {
     pipeline?: string;
 }
 
-export function genericFind(parameters: GenericFindParameters) {
+export function genericFind(parameters: GenericFindParameters): Promise<any[]> {
 
     const client = parameters.mongodbclient,
         dbname = parameters.dbname,
@@ -28,7 +28,7 @@ export function genericFind(parameters: GenericFindParameters) {
     return findAndReturnAsPromise(client, dbname, collection, JSON.parse(project), JSON.parse(filter), JSON.parse(sort), Number(limit));
 }
 
-export function genericAggregate(parameters: GenericAggregateParameters) {
+export function genericAggregate(parameters: GenericAggregateParameters): Promise<any[]> {
 
     const client = parameters.mongodbclient,
         dbname = parameters.dbname,

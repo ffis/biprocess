@@ -39,7 +39,7 @@ var jobManager = new jobs_1.JobManager({
     libs: libs,
     scheduleJob: node_schedule_1.scheduleJob
 });
-var interfaces = interfaces_1.runInterfaces(config, runEnteredCommand);
+var interfaces = interfaces_1.getInterfaces(config, runEnteredCommand);
 function safeexit() {
     jobManager.cancelAllCrons();
     Promise

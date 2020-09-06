@@ -26,7 +26,7 @@ export interface MongoDBConfig {
     "enabled": boolean;
     "url": string;
     "database": string;
-    "options": MongoClientOptions;
+    "options"?: MongoClientOptions;
 }
 
 export interface RedisConfig {

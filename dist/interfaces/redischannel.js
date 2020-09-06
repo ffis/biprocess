@@ -33,7 +33,11 @@ var RedisChannelInterface = (function () {
                 }).length > 0;
             });
             triggeredJobs.forEach(function (job) {
-                _this.parameters.runEnteredCommand(job.$.key);
+                _this.parameters
+                    .runEnteredCommand(job.$.key)
+                    .catch(function (err) {
+                    console.error(err);
+                });
             });
         });
         return Promise.resolve();

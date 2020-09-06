@@ -8,9 +8,9 @@ export class Commands {
 
 	public help(jobs: JobElement[], output: NodeJS.WritableStream): Promise<void> {
 		const comms = Object.keys(supportedCommandsDescription).map(function (s) {
-			return s + (typeof supportedCommandsDescription[s] === "string" ? EOL + "\t" + supportedCommandsDescription[s] : "");
+			return s + EOL + "\t" + supportedCommandsDescription[s];
 		});
-		const options = jobs.map(function (job) {
+		const options = jobs.map((job) => {
 			return job.$.key + (job.description ? EOL + "\t" + job.description : "");
 		}).concat(comms);
 
@@ -112,8 +112,9 @@ export class ReadLineInterface implements BiprocessInterface {
 	}
 
 	public completer(line: string): [string[], string] {
-		const hits = this.options.filter((c) => c.startsWith(line));
-
-		return [line.length ? hits : this.options, line];
+		return [ line.length > 0 ?
+			this.options.filter((c) => c.startsWith(line)) :
+			this.options,
+		line ];
 	}
 }

@@ -24,13 +24,13 @@ export interface BiprocessInterface {
     setJobs: (jobs: JobElement[]) => void;
 }
 
-export function runInterfaces(config: Config, runEnteredCommand: (s: string) => Promise<void>): BiprocessInterface[] {
+export function getInterfaces(config: Config, runEnteredCommand: (s: string) => Promise<void>): BiprocessInterface[] {
     const interfaces: BiprocessInterface[] = [];
 
     if (config.server && config.server.enabled) {
-        const retrieveFn = (_s: string) => {
-            return Promise.resolve("");
-        }
+        /* TODO: design and implement this */
+        const retrieveFn = (_s: string) => Promise.resolve("");
+
         const httpinterface = new HTTPInterface({ config: config.server, runEnteredCommand, retrieveFromKey: retrieveFn });
         interfaces.push(httpinterface);
     }

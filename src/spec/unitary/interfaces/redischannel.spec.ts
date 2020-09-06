@@ -71,6 +71,7 @@ describe("RedisChannel Interface", () => {
         const runEnteredCommand = (_command: string) => {
             return expectedValue === _command ? Promise.resolve() : Promise.reject();
         };
+
         const rcInterface = new RedisChannelInterface({
             config,
             createClient,
@@ -116,6 +117,9 @@ describe("RedisChannel Interface", () => {
                 fake.emit("message", config.channels.listen[0], "this is a test");
                 jasmine.clock().tick(1);
                 expectedValue = jobs[0].$.key;
+                fake.emit("message", config.channels.listen[0], apiDescription);
+                jasmine.clock().tick(1);
+                expectedValue = "failed";
                 fake.emit("message", config.channels.listen[0], apiDescription);
                 jasmine.clock().tick(1);
             })

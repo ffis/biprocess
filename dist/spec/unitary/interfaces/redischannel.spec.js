@@ -134,6 +134,9 @@ describe("RedisChannel Interface", function () {
                     expectedValue = jobs[0].$.key;
                     fake.emit("message", config.channels.listen[0], apiDescription);
                     jasmine.clock().tick(1);
+                    expectedValue = "failed";
+                    fake.emit("message", config.channels.listen[0], apiDescription);
+                    jasmine.clock().tick(1);
                 })
                     .then(function () { return expectAsync(rcInterface.close()).toBeResolved(); })
                     .then(function () { return expectAsync(rcInterface.close()).toBeResolved(); })];

@@ -3,9 +3,11 @@ import { QueryTypes } from "sequelize";
 import { GenericQueryParameters } from "../routes/util";
 import { ConnectionType } from "../types";
 
-export function queryAndReturnAsPromise(connection: ConnectionType, query: string, parameters: GenericQueryParameters) {
+export function queryAndReturnAsPromise(connection: ConnectionType, query: string, parameters: GenericQueryParameters): Promise<any[]> {
 	const pms = {
-		bind: Object.keys(parameters).length > 1 ? Object.assign({}, parameters, {query: null}) : undefined,
+		bind: Object.keys(parameters).length > 1 ?
+			Object.assign({}, parameters, {query: null}) :
+			undefined,
 		type: QueryTypes.SELECT
 	};
 
