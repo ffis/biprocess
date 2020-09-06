@@ -1,6 +1,7 @@
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.afterFunctionFn = exports.decorateParametersFn = exports.getOptions = void 0;
+var util_1 = require("util");
 var node_schedule_1 = require("node-schedule");
 var redis_1 = require("redis");
 var utils_1 = require("./utils");
@@ -30,6 +31,8 @@ if (program.quiet) {
 }
 var redisclient = redis_1.createClient(config.redis);
 var redispublish = redis_1.createClient(config.redis);
+var redisClientGet = util_1.promisify(redisclient.get).bind(redisclient);
+var redisClientSet = util_1.promisify(redisclient.set).bind(redisclient);
 var connection;
 var mongodbclient;
 var jobManager = new jobs_1.JobManager({
@@ -133,14 +136,20 @@ function decorateParametersFn(params) {
 }
 exports.decorateParametersFn = decorateParametersFn;
 function afterFunctionFn(value, newkey) {
-    console.log(newkey);
-    var stringfied = JSON.stringify(value);
-    redisclient.set(newkey, stringfied, print);
-    redispublish.publish(newkey, stringfied);
-    redispublish.publish("updates", newkey);
-    if (config.debug) {
-        console.log("Event OK:", newkey, "The length of the new stored value is:", stringfied.length);
-    }
+    redisClientGet(newkey).then(function (valueStringified) {
+        var stringfied = JSON.stringify(value);
+        if (!valueStringified || valueStringified !== stringfied) {
+            redisClientSet(newkey, stringfied).then(function () {
+                redispublish.publish(newkey, stringfied);
+                redispublish.publish("updates", newkey);
+                if (config.debug) {
+                    console.log("Event OK:", newkey, "The length of the new stored value is:", stringfied.length);
+                }
+            }).catch(function (err) {
+                console.error("Error storing", newkey, err);
+            });
+        }
+    });
 }
 exports.afterFunctionFn = afterFunctionFn;
 process.on("uncaughtException", function (s) {

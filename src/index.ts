@@ -1,3 +1,4 @@
+import { promisify } from "util";
 import { scheduleJob } from "node-schedule";
 import { createClient, RedisClient } from "redis";
 
@@ -45,6 +46,9 @@ if (program.quiet) {
 const redisclient: RedisClient = createClient(config.redis);
 const redispublish: RedisClient = createClient(config.redis);
 
+const redisClientGet = promisify(redisclient.get).bind(redisclient);
+const redisClientSet = promisify(redisclient.set).bind(redisclient);
+
 let connection: ConnectionType;
 let mongodbclient: MongoClient;
 
@@ -70,6 +74,7 @@ function safeexit() {
 			if (mongodbclient) {
 				mongodbclient.close();
 			}
+
 			redisclient.quit();
 			redispublish.quit();
 
@@ -170,15 +175,20 @@ export function decorateParametersFn(params: {[key: string]: any}): void {
 }
 
 export function afterFunctionFn(value: any[], newkey: string): void {
-	console.log(newkey);
-	const stringfied = JSON.stringify(value);
-	redisclient.set(newkey, stringfied, print);
-
-	redispublish.publish(newkey, stringfied);
-	redispublish.publish("updates", newkey);
-	if (config.debug) {
-		console.log("Event OK:", newkey, "The length of the new stored value is:", stringfied.length);
-	}
+	redisClientGet(newkey).then((valueStringified: string | null) => {
+		const stringfied = JSON.stringify(value);
+		if (!valueStringified || valueStringified !== stringfied) {
+			redisClientSet(newkey, stringfied).then(() => {
+				redispublish.publish(newkey, stringfied);
+				redispublish.publish("updates", newkey);
+				if (config.debug) {
+					console.log("Event OK:", newkey, "The length of the new stored value is:", stringfied.length);
+				}
+			}).catch((err) => {
+				console.error("Error storing", newkey, err);
+			});
+		}
+	});
 }
 
 process.on("uncaughtException", (s) => {
