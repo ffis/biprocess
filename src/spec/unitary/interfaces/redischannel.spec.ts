@@ -4,7 +4,7 @@ import {
 } from "../../../lib/interfaces/redischannel";
 
 // import { Method, JobElement } from "../../../types";
-import { RedisConfig } from "../../../config";
+import { RedisConfig } from "../../../types/config";
 import { JobElement, Method } from "../../../types";
 
 type Callback = (channel: string, message: string) => void;

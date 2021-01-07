@@ -3,12 +3,20 @@ import {
   HelpCommandOutput,
   HelpCommandOutputItem,
 } from "../../../lib/interfaces/http";
-import { ServerConfig } from "../../../config";
+import { ServerConfig } from "../../../types/config";
 
 import request = require("supertest");
 
 import getPort = require("get-port");
 import { Method, JobElement } from "../../../types";
+
+interface ThisDescribe {
+  config: ServerConfig;
+}
+
+interface ThisSpec extends ThisDescribe {
+  httpInterface: HTTPInterface;
+}
 
 describe("HTTPInterface", () => {
   it("should fail work with non valid values", async () => {
@@ -34,180 +42,164 @@ describe("HTTPInterface", () => {
     return await expectAsync(httpInterface.run()).toBeRejected();
   });
 
-  it("should work with default values", (done: DoneFn) => {
-    const options = ["a", "b", "c"];
-    const commandAvailable = "/mycommand";
-    const commandNotAvailable = "/mycommand2";
-    const failingCommand = "/failing";
+  beforeAll(async function (this: ThisDescribe) {
+    const port = await getPort();
+    this.config = {
+      bind: "localhost",
+      port,
+      enabled: true,
+    };
+  });
 
-    const storedValue = '[{"a": 1}]';
-    let httpInterface: HTTPInterface;
+  const options = ["a", "b", "c"];
+  const commandAvailable = "/mycommand";
+  const commandNotAvailable = "/mycommand20";
+  const failingCommand = "/failing";
 
-    let expectedValue: string;
-    const apiDescription = "Api endpoint example";
+  const storedValue = '[{"a": 1}]';
 
-    getPort()
-      .then((port) => {
-        const config: ServerConfig = {
-          bind: "localhost",
-          port,
-          enabled: true,
-        };
-        const runEnteredCommand = (command: string) => {
-          expect(command).toEqual(expectedValue);
+  let expectedValue: string;
 
-          return failingCommand === command
-            ? Promise.reject()
-            : Promise.resolve();
-        };
+  const apiDescription = "Api endpoint example";
 
-        const retrieveFromKey = (_s: string) => {
-          expect(_s).toEqual(expectedValue);
+  beforeEach(async function (this: ThisSpec) {
+    const runEnteredCommand = (command: string) => {
+      expect(command).toEqual(expectedValue);
+      if (command === commandNotAvailable) {
+        return Promise.reject({ status: 404, message: "Command not found" });
+      }
 
-          if (failingCommand === _s) {
-            return Promise.reject();
-          }
+      return failingCommand === command
+        ? Promise.reject({ status: 500, message: "Command errored" })
+        : Promise.resolve();
+    };
 
-          return commandNotAvailable === _s
-            ? Promise.resolve("")
-            : Promise.resolve(storedValue);
-        };
-        const jobs: JobElement[] = [
-          {
-            $: {
-              key: "/api",
-              method: Method.UtilGenericQuery,
-            },
-            description: [apiDescription],
-            parameters: [],
-          },
-        ];
-        httpInterface = new HTTPInterface({
-          config,
-          runEnteredCommand,
-          retrieveFromKey,
-        });
+    const retrieveFromKey = (_s: string) => {
+      expect(_s).toEqual(expectedValue);
 
-        httpInterface.setOptions(options);
-        httpInterface.setJobs(jobs);
-        return expectAsync(httpInterface.run()).toBeResolved();
-      })
-      .then(
-        () =>
-          new Promise((resolve) => {
-            request(httpInterface.app)
-              .get("/")
-              .expect("Content-Type", /json/)
-              .expect(200, options, () => {
-                resolve();
-              });
-          })
-      )
-      .then(
-        () =>
-          new Promise((resolve) => {
-            expectedValue = commandAvailable;
-            request(httpInterface.app)
-              .post(commandAvailable)
-              .expect("Content-Type", /json/)
-              .expect(200, commandAvailable, () => {
-                resolve();
-              });
-          })
-      )
-      .then(
-        () =>
-          new Promise((resolve) => {
-            expectedValue = commandNotAvailable;
-            request(httpInterface.app)
-              .post(commandNotAvailable)
-              .expect("Content-Type", /json/)
-              .expect(404, () => {
-                resolve();
-              });
-          })
-      )
-      .then(
-        () =>
-          new Promise((resolve) => {
-            expectedValue = commandNotAvailable;
-            request(httpInterface.app)
-              .get(commandNotAvailable)
-              .expect("Content-Type", /json/)
-              .expect(404, () => {
-                resolve();
-              });
-          })
-      )
-      .then(
-        () =>
-          new Promise((resolve) => {
-            expectedValue = failingCommand;
-            request(httpInterface.app)
-              .get(failingCommand)
-              .expect("Content-Type", /json/)
-              .expect(500, () => {
-                resolve();
-              });
-          })
-      )
-      .then(
-        () =>
-          new Promise((resolve) => {
-            expectedValue = failingCommand;
-            request(httpInterface.app)
-              .post(failingCommand)
-              .expect("Content-Type", /json/)
-              .expect(500, () => {
-                resolve();
-              });
-          })
-      )
-      .then(
-        () =>
-          new Promise((resolve) => {
-            expectedValue = commandAvailable;
+      if (failingCommand === _s) {
+        return Promise.reject({ status: 500, message: "Failing command" });
+      }
 
-            request(httpInterface.app)
-              .get(commandAvailable)
-              .expect("Content-Type", /json/)
-              .expect(200, JSON.parse(storedValue), () => {
-                resolve();
-              });
-          })
-      )
-      .then(() => {
-        expectedValue = "/help";
+      return commandNotAvailable === _s
+        ? Promise.resolve("")
+        : Promise.resolve(storedValue);
+    };
+    const jobs: JobElement[] = [
+      {
+        $: {
+          key: "/api",
+          method: Method.UtilGenericQuery,
+        },
+        description: [apiDescription],
+        parameters: [],
+      },
+    ];
+    this.httpInterface = new HTTPInterface({
+      config: this.config,
+      runEnteredCommand,
+      retrieveFromKey,
+    });
 
-        return request(httpInterface.app)
-          .post("/help")
-          .expect("Content-Type", /json/)
-          .expect(200)
-          .then((response) => {
-            const commands: HelpCommandOutput = response.body;
-            expect(commands).toBeDefined();
-            expect(typeof commands).toBe("object");
-            expect(Array.isArray(commands)).toBeTrue();
-            const apiCommand = commands.find(
-              (c: HelpCommandOutputItem) => c.command === "/api"
-            );
-            expect(apiCommand).toBeDefined();
-            if (apiCommand) {
-              expect(apiCommand.description).toBe(apiDescription);
-            }
-          });
-      })
-      .then(() => {
-        return expectAsync(httpInterface.run()).toBeResolved();
-      })
-      .then(() => {
-        return expectAsync(httpInterface.close()).toBeResolved();
-      })
-      .then(() => {
-        return expectAsync(httpInterface.close()).toBeResolved();
-      })
-      .then(() => {
-        done();
+    this.httpInterface.setOptions(options);
+    this.httpInterface.setJobs(jobs);
+
+    await this.httpInterface.run();
+  });
+
+  it("should be able to list options", function (this: ThisSpec) {
+    return request(this.httpInterface.app)
+      .get("/")
+      .expect("Content-Type", /json/)
+      .expect(200)
+      .then((req) => {
+        expect(req.body).toEqual(options);
       });
+  });
+  it("should be able to run an available command", function (this: ThisSpec) {
+    expectedValue = commandAvailable;
+
+    return request(this.httpInterface.app)
+      .post(commandAvailable)
+      .expect("Content-Type", /json/)
+      .expect(200)
+      .then((req) => {
+        expect(req.body).toEqual(expectedValue);
+      });
+  });
+
+  it("should not be able to run a non available command", function (this: ThisSpec) {
+    expectedValue = commandNotAvailable;
+
+    return (
+      request(this.httpInterface.app)
+        .post(commandNotAvailable)
+        .expect("Content-Type", /json/)
+        .expect(404)
+        // eslint-disable-next-line @typescript-eslint/no-empty-function
+        .then(() => {})
+    );
+  });
+  it("should be not be able to get a failing command", function (this: ThisSpec) {
+    expectedValue = failingCommand;
+
+    return (
+      request(this.httpInterface.app)
+        .get(failingCommand)
+        .expect("Content-Type", /json/)
+        .expect(500)
+        // eslint-disable-next-line @typescript-eslint/no-empty-function
+        .then(() => {})
+    );
+  });
+  it("should be not be able to run a failing command", function (this: ThisSpec) {
+    expectedValue = failingCommand;
+
+    return (
+      request(this.httpInterface.app)
+        .post(failingCommand)
+        .expect("Content-Type", /json/)
+        .expect(500)
+        // eslint-disable-next-line @typescript-eslint/no-empty-function
+        .then(() => {})
+    );
+  });
+  it("should be not be able to get a working command", function (this: ThisSpec) {
+    expectedValue = commandAvailable;
+
+    return request(this.httpInterface.app)
+      .get(commandAvailable)
+      .expect("Content-Type", /json/)
+      .expect(200)
+      .then((req) => {
+        expect(req.body).toEqual(JSON.parse(storedValue));
+      });
+  });
+  it("should be not be able to list commands", function (this: ThisSpec) {
+    expectedValue = "/help";
+
+    return request(this.httpInterface.app)
+      .post("/help")
+      .expect("Content-Type", /json/)
+      .expect(200)
+      .then((response) => {
+        const commands: HelpCommandOutput = response.body;
+        expect(commands).toBeDefined();
+        expect(typeof commands).toBe("object");
+        expect(Array.isArray(commands)).toBeTrue();
+        const apiCommand = commands.find(
+          (c: HelpCommandOutputItem) => c.command === "/api"
+        );
+        expect(apiCommand).toBeDefined();
+        if (apiCommand) {
+          expect(apiCommand.description).toBe(apiDescription);
+        }
+      });
+  });
+
+  afterEach(async function (this: ThisSpec) {
+    await expectAsync(this.httpInterface.run()).toBeResolved();
+    await expectAsync(this.httpInterface.close()).toBeResolved();
+    await expectAsync(this.httpInterface.close()).toBeResolved();
   });
 });

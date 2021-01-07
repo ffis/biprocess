@@ -1,5 +1,7 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
+/* eslint-disable @typescript-eslint/ban-ts-comment */
 import { Express, Request, Response, Router } from "express";
-import express = require("express");
+import express from "express";
 
 import {
   BiprocessInterface,
@@ -8,7 +10,7 @@ import {
 } from ".";
 import { Server } from "http";
 
-import { ServerConfig } from "../../config";
+import { ServerConfig } from "../../types/config";
 import { ok } from "assert";
 import { Logger, JobElement } from "../../types";
 
@@ -77,6 +79,19 @@ interface HTTPInterfaceOptionsInternal {
   logger: Logger;
 }
 
+function errorHandler(res: Response, err: unknown) {
+  const message =
+    err && typeof (err as any).message === "string" ? (err as any).message : "";
+  const status =
+    err && typeof (err as any).status === "number" ? (err as any).status : 500;
+  res.status(status);
+  if (message) {
+    res.json(message);
+  } else {
+    res.end();
+  }
+}
+
 export class HTTPInterface implements BiprocessInterface {
   private app_: Express | null;
   private router: Router;
@@ -119,7 +134,7 @@ export class HTTPInterface implements BiprocessInterface {
             })
             .catch((err) => {
               this.parameters.logger?.error(err);
-              res.status(500).end();
+              errorHandler(res, err);
             });
         }
       })
@@ -129,9 +144,9 @@ export class HTTPInterface implements BiprocessInterface {
           .then((value) => {
             res.json(value);
           })
-          .catch((err: Error) => {
+          .catch((err) => {
             this.parameters.logger?.error(err);
-            res.status(500).end();
+            errorHandler(res, err);
           });
       });
     this.options = [];

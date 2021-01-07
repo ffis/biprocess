@@ -1,10 +1,10 @@
 import { getInterfaces } from "../../../lib/interfaces";
-import { Config } from "../../../config";
+import { IConfig } from "../../../types/config";
 
 describe("Index Interface", () => {
   it("should be able to get Interfaces", () => {
     const runEnteredCommand = () => Promise.resolve();
-    const config: Config = {
+    const config: IConfig = {
       db: {
         database: "database",
         enabled: true,

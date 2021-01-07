@@ -1,6 +1,6 @@
 import { createClient } from "redis";
 
-import { Config } from "../../config";
+import { IConfig } from "../../types/config";
 import { HTTPInterface } from "./http";
 import { JobElement } from "../../types";
 import { RedisChannelInterface } from "./redischannel";
@@ -25,7 +25,7 @@ export interface BiprocessInterface {
 }
 
 export function getInterfaces(
-  config: Config,
+  config: IConfig,
   runEnteredCommand: (s: string) => Promise<void>
 ): BiprocessInterface[] {
   const interfaces: BiprocessInterface[] = [];

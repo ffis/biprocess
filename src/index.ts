@@ -11,7 +11,7 @@ import { Command } from "commander";
 
 import { ConnectionType, MongoConnectionType } from "./types";
 
-import { Config, getConfig } from "./config";
+import { IConfig } from "./types/config";
 import { connectSQL } from "./lib/connections/mssql";
 import { connectMongo } from "./lib/connections/mongo";
 import { JobManager } from "./lib/jobs/impl/jobmanager";
@@ -26,6 +26,7 @@ import {
   RedisConnectionLike,
   redisProvider,
 } from "./lib/connections/redis";
+import { configProvider } from "./providers/config";
 
 const packagedescription = JSON.parse(
   readFileSync(resolve(__dirname, "..", "package.json"), "utf-8")
@@ -50,7 +51,7 @@ if (!program.config) {
   process.exit(1);
 }
 
-const config: Config = getConfig(program.config);
+const config: IConfig = configProvider(process.argv);
 
 if (program.quiet) {
   config.quiet = true;

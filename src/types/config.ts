@@ -1,6 +1,4 @@
 import { MongoClientOptions } from "mongodb";
-import { readFileSync } from "fs";
-import { isAbsolute, resolve } from "path";
 
 export interface DbConfig {
   enabled: boolean;
@@ -42,7 +40,7 @@ export interface ServerConfig {
   bind: string;
 }
 
-export interface Config {
+export interface IConfig {
   db: DbConfig;
   mongodb: MongoDBConfig;
   redis: RedisConfig;
@@ -50,18 +48,4 @@ export interface Config {
   jobsDirectory: string;
   server: ServerConfig;
   quiet?: boolean;
-}
-
-export function getConfig(configfile: string): Config {
-  try {
-    const where = isAbsolute(configfile)
-      ? configfile
-      : resolve(process.cwd(), configfile);
-
-    return JSON.parse(readFileSync(where, "utf-8"));
-  } catch (err) {
-    const message =
-      "You need to provide a valid config file. Use --help parameter for further information.";
-    throw new Error(message);
-  }
 }

@@ -1,5 +1,5 @@
 import { MongoClientOptions } from "mongodb";
-import { Config } from "../../config";
+import { IConfig } from "../../types/config";
 import { MongoConnectionType } from "../../types";
 
 export type connectLike = (
@@ -9,7 +9,7 @@ export type connectLike = (
 
 export function connectMongo(
   connect: connectLike,
-  config: Config
+  config: IConfig
 ): Promise<MongoConnectionType> {
   const options: MongoClientOptions = config.mongodb.options
     ? config.mongodb.options

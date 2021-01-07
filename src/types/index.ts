@@ -1,4 +1,4 @@
-import { Config } from "./config";
+import { IConfig } from "./config";
 import { MongoClient } from "mongodb";
 import { Sequelize } from "sequelize/types";
 import { Job as nodeschedulejob } from "node-schedule";
@@ -71,7 +71,7 @@ export type ConnectionType = Sequelize;
 export type MongoConnectionType = MongoClient;
 
 export interface JobParameters {
-  config: Config;
+  config: IConfig;
   connection: ConnectionType;
   mongodbclient: MongoConnectionType;
   dbname: string;

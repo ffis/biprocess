@@ -1,5 +1,5 @@
 import { BiprocessInterface } from ".";
-import { RedisConfig } from "../../config";
+import { RedisConfig } from "../../types/config";
 import { ok } from "assert";
 import { JobElement } from "../../types";
 
