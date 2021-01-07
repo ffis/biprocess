@@ -4,100 +4,112 @@ import { Sequelize } from "sequelize/types";
 import { Job as nodeschedulejob } from "node-schedule";
 
 export interface JobList {
-    jobs: Jobs;
+  jobs: Jobs;
 }
 
 export interface Jobs {
-    job: JobElement[];
+  job: JobElement[];
 }
 
 export interface JobElement {
-    $: JobClass;
-    parameters: Parameter[];
-    description?: string[];
-    triggers?: Trigger[];
+  $: JobClass;
+  parameters: Parameter[];
+  description?: string[];
+  triggers?: Trigger[];
 }
 
 export interface JobClass {
-    key: string;
-    method: Method;
-    cron?: string;
+  key: string;
+  method: Method;
+  cron?: string;
 }
 
 export enum Method {
-    MongoGenericAggregate = "mongo.genericAggregate",
-    MongoGenericFind = "mongo.genericFind",
-    UtilGenericQuery = "util.genericQuery",
+  MongoGenericAggregate = "mongo.genericAggregate",
+  MongoGenericFind = "mongo.genericFind",
+  UtilGenericQuery = "util.genericQuery",
 }
 
 export interface Parameter {
-    field: FieldElement[];
+  field: FieldElement[];
 }
 
 export interface FieldElement {
-    $: Field;
-    value: string[];
+  $: Field;
+  value: string[];
 }
 
 export interface Field {
-    name: Name;
+  name: Name;
 }
 
 export enum Name {
-    Collection = "collection",
-    Dbname = "dbname",
-    Filter = "filter",
-    Limit = "limit",
-    Pipeline = "pipeline",
-    Project = "project",
-    Query = "query",
-    Sort = "sort",
+  Collection = "collection",
+  Dbname = "dbname",
+  Filter = "filter",
+  Limit = "limit",
+  Pipeline = "pipeline",
+  Project = "project",
+  Query = "query",
+  Sort = "sort",
 }
 
 export interface Trigger {
-    on: OnElement[];
+  on: OnElement[];
 }
 
 export interface OnElement {
-    $: On;
+  $: On;
 }
 
 export interface On {
-    action: string;
-    contains: string;
+  action: string;
+  contains: string;
 }
 
 export type ConnectionType = Sequelize;
 export type MongoConnectionType = MongoClient;
 
 export interface JobParameters {
-    config: Config;
-    connection: ConnectionType;
-    mongodbclient: MongoConnectionType;
-    dbname: string;
+  config: Config;
+  connection: ConnectionType;
+  mongodbclient: MongoConnectionType;
+  dbname: string;
 }
 
 export type MethodKind = () => Promise<unknown[]>;
 
 export interface Library {
-    [method: string]: MethodKind;
+  [method: string]: MethodKind;
 }
 
 export interface Libraries {
-    [s: string]: Library;
+  [s: string]: Library;
 }
 
-export type callerType = (functionname: MethodKind, obj: Record<string, unknown>, key: string, parameters: { [key: string]: string[] } | null, decorate: DecorateFunction, after: AfterFunction) => () => void;
+export type callerType = (
+  functionname: MethodKind,
+  obj: Record<string, unknown>,
+  key: string,
+  parameters: { [key: string]: string[] } | null,
+  decorate: DecorateFunction,
+  after: AfterFunction
+) => () => void;
 
-export type ScheduleJob = (name: string, rule: string, callback: () => void) => Job;
+export type ScheduleJob = (
+  name: string,
+  rule: string,
+  callback: () => void
+) => Job;
 
 export type Job = nodeschedulejob;
 
-export type DecorateFunction = (params: {[key: string]: unknown}) => void;
+export type DecorateFunction = (params: { [key: string]: unknown }) => void;
 export type AfterFunction = (value: unknown[], newkey: string) => void;
 
 export interface Logger {
-    log: (... args: any) => void;
-    error: (... args: any) => void;
+  log: (...args: any) => void;
+  error: (...args: any) => void;
 }
 
+export type MongoClientLike = MongoClient;

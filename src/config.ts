@@ -3,69 +3,65 @@ import { readFileSync } from "fs";
 import { isAbsolute, resolve } from "path";
 
 export interface DbConfig {
-    "enabled": boolean;
-    "database": string;
-    "username": string;
-    "password": string;
-    "options": {
-        "dialect": "mysql" | "postgres" | "sqlite" | "mariadb" | "mssql" | undefined;
-        "host": string;
-        "logging": boolean;
-        "debug": boolean;
-        "dialectOptions": {
-            "encrypt": boolean;
-            "options": {
-                "enableArithAbort": boolean;
-                "trustServerCertificate": boolean;
-            }
-        }
-    }
+  enabled: boolean;
+  database: string;
+  username: string;
+  password: string;
+  options: {
+    dialect: "mysql" | "postgres" | "sqlite" | "mariadb" | "mssql" | undefined;
+    host: string;
+    logging: boolean;
+    debug: boolean;
+    dialectOptions: {
+      encrypt: boolean;
+      options: {
+        enableArithAbort: boolean;
+        trustServerCertificate: boolean;
+      };
+    };
+  };
 }
 
 export interface MongoDBConfig {
-    "enabled": boolean;
-    "url": string;
-    "database": string;
-    "options"?: MongoClientOptions;
+  enabled: boolean;
+  url: string;
+  database: string;
+  options?: MongoClientOptions;
 }
 
 export interface RedisConfig {
-    "host": string;
-    "port"?: number;
-    "password"?: string;
-    "no_ready_check": boolean;
-    "channels": {
-        "listen": string[];
-    }
+  url: string;
+  channels: {
+    listen: string[];
+  };
 }
 
 export interface ServerConfig {
-    "enabled": boolean;
-    "port": number;
-    "bind": string;
+  enabled: boolean;
+  port: number;
+  bind: string;
 }
 
 export interface Config {
-    "db": DbConfig;
-    "mongodb": MongoDBConfig;
-    "redis": RedisConfig;
-    "debug": boolean;
-    "jobsDirectory": string;
-    "server": ServerConfig;
-    "quiet"?: boolean;
+  db: DbConfig;
+  mongodb: MongoDBConfig;
+  redis: RedisConfig;
+  debug: boolean;
+  jobsDirectory: string;
+  server: ServerConfig;
+  quiet?: boolean;
 }
 
 export function getConfig(configfile: string): Config {
-    try {
+  try {
+    const where = isAbsolute(configfile)
+      ? configfile
+      : resolve(process.cwd(), configfile);
 
-        const where = isAbsolute(configfile) ?
-            configfile :
-            resolve(process.cwd(), configfile);
-
-        return JSON.parse(readFileSync(where, "utf-8"));
-
-    } catch (err) {
-        const message = "You need to provide a valid config file. Use --help parameter for further information.";
-        throw new Error(message);
-    }
+    return JSON.parse(readFileSync(where, "utf-8"));
+  } catch (err) {
+    const message =
+      "You need to provide a valid config file. Use --help parameter for further information.";
+    throw new Error(message);
+  }
 }
