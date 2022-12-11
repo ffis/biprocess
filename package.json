@@ -8,7 +8,7 @@
     "chai": "^4.2.0",
     "commander": "^6.2.1",
     "cryptr": "^6.0.2",
-    "express": "^4.17.1",
+    "express": "^4.17.3",
     "glob-to-regexp": "^0.4.1",
     "minimist": "^1.2.5",
     "mongodb": "^3.6.3",
